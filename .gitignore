@@ -1,0 +1,21 @@
+# Python
+*.pyc
+__pycache__/
+venv/
+.env
+
+# Flask
+instance/
+.webassets-cache
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
