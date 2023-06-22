@@ -20,4 +20,4 @@ logs/
 .DS_Store
 Thumbs.db
 
-mongodb_data/
+mongodb_data
