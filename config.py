@@ -1,7 +1,4 @@
-import os
-
-
-class Config:
+class BaseConfig(object):
     #MONGO_URI = os.environ.get('MONGO_URI')
     #MONGO_URI = 'mongodb://localhost:27017/your-database'
     MONGODB_SETTINGS = {

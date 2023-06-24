@@ -1,25 +1,35 @@
-import logging
 import os
 
 from dotenv import load_dotenv
 from flask import Flask
 from flask_bcrypt import Bcrypt
+from flask_login import LoginManager
 from pymongo import MongoClient
 
-from app.conifg import Config
+bcrypt = Bcrypt()
+login_manager = LoginManager()
 
-load_dotenv(override=True)
 
-app = Flask(__name__)
-app.config.from_object(Config)
+def create_app():
+    load_dotenv(override=True)
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_object('config.BaseConfig')
+    app.secret_key = os.getenv('APP_SECRET_KEY')
 
-bcrypt = Bcrypt(app)
-print(os.getenv('MONGO_URI'))
+    bcrypt.init_app(app)
 
-mongo = MongoClient(os.getenv('MONGO_URI'))
+    mongo = MongoClient(os.getenv('MONGO_URI'))
+    app.mongo = mongo.get_database('admonish-grumbler-db')
 
-from app.interface.http.user_controller import bp as user_bp
+    login_manager.init_app(app)
+    login_manager.login_view = "user.login"
 
-app.register_blueprint(user_bp)
+    with app.app_context():
+        from .interface.http import (index_controller, post_controller,
+                                     user_controller)
 
-from app import domain, infrastructure, interface, usecase
+    app.register_blueprint(user_controller.bp)
+    app.register_blueprint(index_controller.bp)
+    app.register_blueprint(post_controller.bp)
+
+    return app

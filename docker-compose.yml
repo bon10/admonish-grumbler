@@ -31,3 +31,6 @@ services:
       ME_CONFIG_MONGODB_SERVER: db
     depends_on:
       - db
+# mongodbのデータはdocker volumeで管理されるので、消すときは docker volume rm mongodb_data
+volumes:
+  mongodb_data:

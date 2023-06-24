@@ -1,7 +1,9 @@
 import logging
 import os
 
-from app import app
+from app import create_app
+
+app = create_app()
 
 if os.environ.get('FLASK_DEBUG') == 'false':
     app.debug = False
