@@ -17,6 +17,7 @@ document.getElementById('postForm').addEventListener('submit', function(event) {
     if (response.ok) {
       console.log('愚痴の投稿に成功しました🤓');
       document.querySelector('textarea[name="content"]').value = ''; // テキストエリアをクリア
+      location.reload();
       // ここで投稿データを追加表示するなどの処理を行う
     } else {
       console.log('愚痴の投稿に失敗しました😭');
