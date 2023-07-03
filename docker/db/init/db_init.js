@@ -1,24 +1,33 @@
-// rs.initiate({
-//   _id: "replset",
-//   members: [{
-//     _id: 0,
-//     host: "mongodb-primary:27017",
-//     priority: 100
-//   }, {
-//     _id: 1,
-//     host: "mongodb-secondary:27017",
-//     priority: 10
-//   }, {
-//     _id: 2,
-//     host: "mongodb-arbiter:27017",
-//     arbiterOnly: true
-//   }]
-// });
-// rs.initiate( {
-//   _id : "my-replica-set",
-//   members: [
-//     { _id: 0, host: "localhost:27017" }
-//   ]
-// })
+init = false;
+print("Init script ...")
 
-db.createUser({ user: "root", pwd: "password", roles: [] })
+try {
+  if (!db.isMaster().ismaster) {
+    print("Error: primary not ready, initialize ...")
+    rs.initiate(
+      {
+        _id:'my-replica-set',
+        members: [
+          { _id:0,
+            host: "mongo:27017"
+          }
+        ]
+      }
+    )
+    quit(1);
+  } else {
+    if (!init) {
+      admin = db.getSiblingDB("admin");
+      admin.createUser(
+        {
+          user: "root",
+          pwd: "password",
+          roles: ["readWriteAnyDatabase"]
+        }
+      );
+      init = true;
+    }
+  }
+} catch(e) {
+  rs.status().ok
+}
