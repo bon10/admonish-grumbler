@@ -1,7 +1,7 @@
 import logging
 import os
 
-from app import create_app
+from app import create_app, socketio
 
 app = create_app()
 
@@ -16,3 +16,4 @@ else:
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
+    socketio.run(app)

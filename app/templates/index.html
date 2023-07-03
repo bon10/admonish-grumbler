@@ -67,32 +67,9 @@
         </div>
     </article>
     {% endfor %}
+    <ul id="messageList"></ul>
 </div>
   </div>
 </div>
-<script>
-  document.getElementById('postForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    var content = document.querySelector('textarea[name="content"]').value;
-    fetch('/post', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ content: content }),
-    })
-    .then(function(response) {
-      if (response.ok) {
-        console.log('愚痴の投稿に成功しました🤓');
-        document.querySelector('textarea[name="content"]').value = ''; // テキストエリアをクリア
-        // ここで投稿データを追加表示するなどの処理を行う
-      } else {
-        console.log('愚痴の投稿に失敗しました😭');
-      }
-    })
-    .catch(function(error) {
-      console.log('通信エラー:', error);
-    });
-  });
-</script>
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
 {% endblock %}

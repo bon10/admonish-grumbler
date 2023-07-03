@@ -15,10 +15,10 @@ class PostRepository:
             'content': content,
             'timestamp': timestamp
         }
-        self.post.insert_one(post_data)
+        return self.post.insert_one(post_data)
 
     def find_all(self):
-        post_data = self.post.find()
+        post_data = self.post.find().sort('timestamp', -1)
         posts = []
         for data in post_data:
             post = Post(

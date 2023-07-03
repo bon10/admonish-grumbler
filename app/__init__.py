@@ -4,10 +4,12 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
+from flask_socketio import SocketIO
 from pymongo import MongoClient
 
 bcrypt = Bcrypt()
 login_manager = LoginManager()
+socketio = SocketIO()
 
 
 def create_app():
@@ -23,6 +25,8 @@ def create_app():
 
     login_manager.init_app(app)
     login_manager.login_view = "user.login"
+
+    socketio.init_app(app)
 
     with app.app_context():
         from .interface.http import (index_controller, post_controller,
