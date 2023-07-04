@@ -48,7 +48,7 @@
                 <p>
                     <strong>{{ session["name"] }}</strong> <small>{{ post.timestamp }}</small>
                     <br>
-                    {{ post.content }}
+                    {{ post.content | safe }}
                 </p>
             </div>
             <nav class="level is-mobile">

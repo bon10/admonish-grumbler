@@ -3,6 +3,7 @@ from flask import Blueprint, render_template
 from flask_socketio import SocketIO, emit
 
 from app import socketio
+from app.domain.services.message_converter import MessageConverter
 from app.usecase.post_interactor import PostInteractor
 
 bp = Blueprint('index', __name__)
@@ -13,6 +14,9 @@ post_interactor = PostInteractor()
 @flask_login.login_required
 def home():
     posts = post_interactor.get_all_posts()  # 投稿データを取得
+    for post in posts:
+        converted_message = MessageConverter.convert_message(post.content)
+        post.content = converted_message
     return render_template('index.html', posts=posts)
 
 
