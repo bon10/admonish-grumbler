@@ -1,3 +1,17 @@
+## What is this?
+
+This is my own application for posting Twitter-like tweets.
+Tweets are stored in MongoDB.
+
+* Python + Flask
+* MongoDB
+
+
+### Features to be supported in the near future
+
+* Real-time tweet acquisition (use Change Streams for MongoDB)
+* infinity scroll
+* Markdown support for tweets
 
 ## How to Develop
 
