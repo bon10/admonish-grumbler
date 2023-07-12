@@ -1,5 +1,3 @@
-// Socket.io
-const socket = io();
 const messageInput = document.getElementById('messageInput');
 const messageList = document.getElementById('messageList');
 
@@ -28,16 +26,3 @@ document.getElementById('postForm').addEventListener('submit', function(event) {
   });
 });
 
-socket.on('connect', () => {
-  console.log('Connected to server');
-});
-
-socket.on('disconnect', () => {
-  console.log('Disconnected from server');
-});
-
-socket.on('new_message', (post) => {
-  const listItem = document.createElement('li');
-  listItem.textContent = post.content;  // 投稿の内容を表示
-  messageList.appendChild(listItem);
-});
