@@ -34,7 +34,7 @@
       </form>
     </div>
     <!-- 投稿リスト -->
-    <div class="container">
+    <section class="section">
       {% for post in data.posts %}
       <article class="media box">
           <figure class="media-left">
@@ -85,7 +85,7 @@
           <a class="pagination-link" href="/page/{{ data.current_page + 1 }}">次のページ</a>
         {% endif %}
       </div>
-    </div>
+    </section>
   </div>
 </div>
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
