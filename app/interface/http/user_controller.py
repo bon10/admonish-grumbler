@@ -20,10 +20,12 @@ def unauthorized():
 
 
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(_user_id):
     logging.debug('load_user called')
-    if 'user_id' in session:
-        return User(user_id)
+    logging.debug('session: {}'.format(session))
+    if '_user_id' in session:
+        logging.debug("aaaa")
+        return User(_user_id)
     else:
         return None
 
@@ -71,9 +73,9 @@ def login():
 
         if user:
             # ユーザーが存在する場合はセッションにユーザーIDを格納
-            # session['user_id'] = str(user.id)
+            session['user_id'] = str(user.id)
             session['username'] = user.username
-            # session["avatar"] = user.avatar
+            session["avatar"] = user.avatar
             user_model = User(
                 id=str(user.id),
                 username=user.username,
