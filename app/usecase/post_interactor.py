@@ -1,7 +1,17 @@
+import datetime
 import logging
+from datetime import datetime
+
+import pytz
 
 from app.domain.services.message_converter import MessageConverter
 from app.infrastructure.post_repository import PostRepository
+
+# UTCのタイムゾーンオブジェクト
+utc_timezone = pytz.timezone('UTC')
+
+# JSTのタイムゾーンオブジェクト
+jst_timezone = pytz.timezone('Asia/Tokyo')
 
 
 class PostInteractor:
@@ -20,8 +30,15 @@ class PostInteractor:
 
         posts = post_repository.find_by_page(page_number, posts_per_page)
         for post in posts:
+            # テキストを読みやすく変更
             converted_message = MessageConverter.convert_message(post.content)
             post.content = converted_message
+
+            # 時間をJSTに変更
+            utc_time = post.timestamp
+            jst_time = utc_time.replace(
+                tzinfo=utc_timezone).astimezone(jst_timezone)
+            post.timestamp = jst_time
         return posts
 
     def get_total_post_count(self):

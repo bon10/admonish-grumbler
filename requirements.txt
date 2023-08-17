@@ -26,6 +26,7 @@ pymongo==4.3.3
 python-dotenv==1.0.0
 python-engineio==4.4.1
 python-socketio==5.8.0
+pytz==2023.3
 tomli==2.0.1
 Werkzeug==2.3.4
 WTForms==3.0.1
