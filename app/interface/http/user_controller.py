@@ -1,9 +1,8 @@
 import logging
 
-import flask_login
 from flask import (Blueprint, flash, redirect, render_template, request,
                    session, url_for)
-from flask_login import login_user
+from flask_login import current_user, login_user
 
 from app import bcrypt, login_manager
 from app.domain.model.user import User
@@ -20,15 +19,13 @@ def unauthorized():
 
 
 @login_manager.user_loader
-def load_user(_user_id):
+def load_user(user_id):
     logging.debug('load_user called')
     logging.debug('session: {}'.format(session))
-    if '_user_id' in session:
-        return User(_user_id)
+    if 'user_id' in session:
+        return User(user_id)
     else:
-        # セッションが切れている場合はログインページにリダイレクト
-        logging.info('セッションが切れています')
-        return redirect(url_for('user.login'))
+        return None
 
 
 @bp.route('/signup', methods=['GET', 'POST'])
@@ -65,6 +62,10 @@ def signup():
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        # すでにログインしている場合、ホームページへリダイレクト
+        return redirect(url_for('index.home'))
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
