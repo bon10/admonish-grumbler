@@ -24,3 +24,9 @@ Tweets are stored in MongoDB.
 ```
 
 Access to http://localhost:5500 from your browser.
+
+If you add a new package, please update requirements.txt.
+
+```
+pip freeze > requirements.txt
+```

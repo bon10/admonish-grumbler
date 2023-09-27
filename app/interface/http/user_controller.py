@@ -24,10 +24,11 @@ def load_user(_user_id):
     logging.debug('load_user called')
     logging.debug('session: {}'.format(session))
     if '_user_id' in session:
-        logging.debug("aaaa")
         return User(_user_id)
     else:
-        return None
+        # セッションが切れている場合はログインページにリダイレクト
+        logging.info('セッションが切れています')
+        return redirect(url_for('user.login'))
 
 
 @bp.route('/signup', methods=['GET', 'POST'])

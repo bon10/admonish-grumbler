@@ -1,5 +1,7 @@
 import re
 
+import markdown
+
 
 class MessageConverter:
     @staticmethod
@@ -8,4 +10,8 @@ class MessageConverter:
         html_link_pattern = r'<a href="\g<0>" target="_blank">\g<0></a>'
         converted_text = re.sub(url_pattern, html_link_pattern, text)
         converted_text = converted_text.replace('\n', '<br/>')
+        return converted_text
+
+    def convert_markdown(text):
+        converted_text = markdown.markdown(text)
         return converted_text
