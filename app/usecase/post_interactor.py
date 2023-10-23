@@ -33,9 +33,9 @@ class PostInteractor:
             # Markdownに変換
             converted_message = MessageConverter.convert_markdown(
                 post.content)
-            # # さらにテキストを読みやすく変更（改行・HTMLのリンク化）
-            # converted_message = MessageConverter.convert_message(
-            #     converted_message)
+            # さらにテキストを読みやすく変更（改行・HTMLのリンク化）
+            converted_message = MessageConverter.convert_message(
+                converted_message)
 
             post.content = converted_message
 
