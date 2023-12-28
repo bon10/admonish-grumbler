@@ -1,6 +1,6 @@
 import re
 
-import markdown
+from markdown import markdown
 
 
 class MessageConverter:
@@ -13,9 +13,14 @@ class MessageConverter:
         converted_text = re.sub(url_pattern, html_link_pattern, text)
 
         # 改行を<br/>に変換
-        converted_text = converted_text.replace('\n', '<br/>')
+        # converted_text = converted_text.replace('\n', '<br />')
         return converted_text
 
     def convert_markdown(text):
-        converted_text = markdown.markdown(text)
+        extensions = [
+            'attr_list',  # HTMLにクラスなどを付与できる
+            'fenced_code',  # コードのシンタックスハイライト用
+            'nl2br',  # 改行を有効にする
+        ]
+        converted_text = markdown(text, extensions=extensions)
         return converted_text
