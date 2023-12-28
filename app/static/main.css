@@ -1,0 +1,10 @@
+.textarea {
+  resize: vertical !important;
+  width:300px;
+  height:200px;
+}
+
+/* 投稿内容におけるURLの折返し */
+article a {
+  word-break: break-all;
+}
