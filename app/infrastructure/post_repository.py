@@ -1,6 +1,4 @@
-import logging
 from datetime import datetime
-from math import log
 
 from bson import ObjectId
 from flask import current_app
