@@ -18,9 +18,9 @@ class MessageConverter:
 
     def convert_markdown(text):
         extensions = [
-            'attr_list',  # HTMLにクラスなどを付与できる
-            'fenced_code',  # コードのシンタックスハイライト用
-            'nl2br',  # 改行を有効にする
+            "attr_list",  # HTMLにクラスなどを付与できる
+            "fenced_code",  # コードのシンタックスハイライト用
+            "nl2br",  # 改行を有効にする
         ]
         converted_text = markdown(text, extensions=extensions)
         return converted_text

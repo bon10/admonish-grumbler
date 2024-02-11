@@ -72,7 +72,7 @@ def login():
 
         # ユーザー認証処理の呼び出し
         user = user_interactor.authenticate(username, password)
-
+        logging.info(user)
         if user:
             # ユーザーが存在する場合はセッションにユーザーIDを格納
             session['user_id'] = str(user.id)

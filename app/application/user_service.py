@@ -10,7 +10,7 @@ class UserService:
     def register_user(self, username, password):
         existing_user = self.user_repository.find_by_username(username)
         if existing_user:
-            raise ValueError('Username already exists')
+            raise ValueError("Username already exists")
 
         user = User(username=username, password=password)
         self.user_repository.create(user)
@@ -20,4 +20,3 @@ class UserService:
         if user and verify_password(password, user.password_hash):
             return user
         return None
-

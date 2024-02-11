@@ -21,6 +21,7 @@ class UserInteractor:
     def authenticate(self, username, password):
         user_repository = UserRepository()
         user = user_repository.find_by_username(username)
+        logging.info("user: {}".format(user))
         if user and check_password_hash(user.password, password):
             logging.info('認証成功')
             return user
