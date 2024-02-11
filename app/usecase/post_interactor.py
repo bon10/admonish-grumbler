@@ -58,3 +58,7 @@ class PostInteractor:
     def get_total_post_count(self):
         post_repository = PostRepository()
         return post_repository.get_total_post_count()
+
+    def delete_post(self, post_id):
+        post_repository = PostRepository()
+        return post_repository.delete_by_id(post_id)

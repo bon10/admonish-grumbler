@@ -8,3 +8,4 @@ env/
 *.sql
 *.sqlite
 mongodb_data/
+.vscode/

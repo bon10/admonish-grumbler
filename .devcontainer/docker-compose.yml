@@ -1,0 +1,16 @@
+version: "3"
+services:
+  web:
+    build:
+      context: ../
+      dockerfile: .devcontainer/Dockerfile
+    container_name: "admonish-grumbler-app"
+    ports:
+      - "5500:5000"
+    tty: true
+    #command: /bin/bash
+    volumes:
+      - ..:/app
+      - venv:/venv
+volumes:
+  venv:
