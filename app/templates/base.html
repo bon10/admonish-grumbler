@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,49 +7,76 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='syntax-highlight.css') }}">
-  <!-- *** SyntaxHighlight [Prism.js] start *** -->
-<!-- Themes -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
-<!-- Toolbar -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" />
-<!-- Line Numbers -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" />
-<!-- Unescaped Markup -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/unescaped-markup/prism-unescaped-markup.min.css" />
-<!-- *** SyntaxHighlight [Prism.js] end *** -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
+  <!-- SyntaxHighlight [Prism.js] -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/unescaped-markup/prism-unescaped-markup.min.css" />
   <title>{% block title %}{% endblock %}</title>
-  <!-- 他の共通のhead要素を追加 -->
 </head>
 <body>
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <div class="notification">
-        <button class="delete"></button>
-        {% for message in messages %}
-          <p>{{ message }}</p>
-        {% endfor %}
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="app-brand">
+        <div class="app-brand-name">GRUMBLER</div>
+        <div class="app-brand-tagline">Let it all out</div>
       </div>
-    {% endif %}
-  {% endwith %}
-  <!-- 他の共通のbody要素を追加 -->
-  {% block content %}
-  {% endblock %}
-<!-- *** SyntaxHighlight [Prism.js] start *** -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-<!-- Toolbar -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
-<!-- Show Language -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/show-language/prism-show-language.min.js"></script>
-<!-- Line Numbers -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
-<!-- Copy to Clipboard --><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"
-  integrity="sha512-/kVH1uXuObC0iYgxxCKY41JdWOkKOxorFVmip+YVifKsJ4Au/87EisD1wty7vxN2kAhnWh6Yc8o/dSAXj6Oz7A==" crossorigin="anonymous"
-  referrerpolicy="no-referrer"></script>
-<!-- Autoloader -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-<!-- Unescaped Markup -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/unescaped-markup/prism-unescaped-markup.min.js"></script>
-<!-- *** SyntaxHighlight [Prism.js] end *** -->
+
+      <ul class="nav-menu">
+        <li>
+          <a href="/" class="{% if request.endpoint == 'index.home' or request.endpoint == 'index.page' %}is-active{% endif %}">
+            <span class="icon"><i class="fas fa-fire"></i></span>
+            <span>ホーム</span>
+          </a>
+        </li>
+        <li>
+          <a href="/summaries" class="{% if request.endpoint and request.endpoint.startswith('summary.') %}is-active{% endif %}">
+            <span class="icon"><i class="fas fa-chart-line"></i></span>
+            <span>サマリー</span>
+          </a>
+        </li>
+        <li>
+          <a href="/settings" class="{% if request.endpoint == 'user.settings' %}is-active{% endif %}">
+            <span class="icon"><i class="fas fa-cog"></i></span>
+            <span>設定</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-user">
+        <div class="sidebar-user-name">{{ session.get("name", "Anonymous") }}</div>
+        <div class="sidebar-user-label">logged in</div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for message in messages %}
+            <div class="flash-toast">
+              <span>{{ message }}</span>
+              <button class="delete-toast" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}
+      {% endblock %}
+    </main>
+  </div>
+
+  <!-- SyntaxHighlight [Prism.js] -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/show-language/prism-show-language.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"
+    integrity="sha512-/kVH1uXuObC0iYgxxCKY41JdWOkKOxorFVmip+YVifKsJ4Au/87EisD1wty7vxN2kAhnWh6Yc8o/dSAXj6Oz7A==" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/unescaped-markup/prism-unescaped-markup.min.js"></script>
 </body>
 </html>

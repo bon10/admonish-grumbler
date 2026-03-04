@@ -37,6 +37,16 @@ class PostRepository:
         count = self.post.count_documents({})
         return count
 
+    def find_by_date_range(self, start, end):
+        post_data = self.post.find({
+            "timestamp": {"$gte": start, "$lte": end}
+        }).sort("timestamp", 1)
+        posts = []
+        for data in post_data:
+            post = Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
+            posts.append(post)
+        return posts
+
     def delete_by_id(self, id):
         """
         指定されたIDのポストを削除します。
