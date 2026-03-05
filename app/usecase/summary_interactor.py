@@ -5,14 +5,14 @@
   AI要約(Summary)の生成・取得・フィードバック保存に関するアプリケーションロジックを制御する。
   週次・月次サマリーの非同期生成(start → run_generation)と、
   スケジューラ用の同期生成(generate_weekly/monthly_summary)の両方を提供する。
-  投稿をプレーンテキストに変換し、AIServiceで分析、結果をSummaryRepositoryに保存する。
+  投稿をプレーンテキストに変換し、AIClientで分析、結果をSummaryRepositoryに保存する。
 """
 import logging
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 
-from app.infrastructure.ai_client import AIService
+from app.infrastructure.ai_client import AIClient
 from app.infrastructure.post_repository import PostRepository
 from app.infrastructure.summary_repository import SummaryRepository
 from app.domain.model.summary import Summary
@@ -115,7 +115,7 @@ class SummaryInteractor:
         scores_history = scores_history[-12:]
 
         try:
-            ai_service = AIService()
+            ai_service = AIClient()
             result = ai_service.analyze_posts(posts_text, summary_type, period_label, previous_feedback)
 
             # Append current scores to history
@@ -211,7 +211,7 @@ class SummaryInteractor:
         scores_history = scores_history[-12:]
 
         try:
-            ai_service = AIService()
+            ai_service = AIClient()
             result = ai_service.analyze_posts(posts_text, summary_type, period_label, previous_feedback)
 
             # Append current scores to history

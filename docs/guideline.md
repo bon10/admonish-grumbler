@@ -36,10 +36,9 @@ app/
 ├── usecase/          # ユースケース層
 │   └── *_interactor.py
 ├── infrastructure/   # インフラ層（最外層）
-│   ├── *_repository.py   # データ永続化
-│   ├── ai_client.py      # 外部AI API呼び出し
-│   ├── opengraph_client.py # HTTP通信によるOGP取得
-│   └── message_converter.py # 外部ライブラリ依存の変換処理
+│   ├── *_repository.py    # データ永続化
+│   ├── *_client.py        # 外部API・HTTP通信
+│   └── *_converter.py     # 外部ライブラリ依存の変換処理
 └── presentation/     # プレゼンテーション層
     └── (Flask routes, templates)
 ```
@@ -54,6 +53,24 @@ app/
 | **usecase** | アプリケーション固有のビジネスルール、ワークフロー制御 | domain |
 | **infrastructure** | DB操作、外部API呼び出し、外部ライブラリ利用 | domain, usecase |
 | **presentation** | HTTPリクエスト/レスポンス処理、テンプレート描画 | domain, usecase, infrastructure |
+
+### ファイル命名規則
+
+各層のファイル名・クラス名は、用途に応じたサフィックスで統一する。
+
+| 層 | サフィックス | 用途 | 例 |
+|----|------------|------|-----|
+| **domain/model** | なし（エンティティ名そのまま） | エンティティ・値オブジェクト | `user.py` → `User` |
+| **domain/services** | `*_builder.py` など（役割に応じた動詞） | ドメインサービス | `ai_prompt_builder.py` → `build_prompt()` |
+| **usecase** | `*_interactor.py` | ユースケース（アプリケーションロジック） | `post_interactor.py` → `PostInteractor` |
+| **infrastructure** | `*_repository.py` | DB永続化 | `post_repository.py` → `PostRepository` |
+| **infrastructure** | `*_client.py` | 外部API・HTTP通信 | `ai_client.py` → `AIClient` |
+| **infrastructure** | `*_converter.py` | 外部ライブラリ依存の変換処理 | `message_converter.py` → `MessageConverter` |
+| **interface/http** | `*_controller.py` | HTTPエンドポイント（Flask Blueprint） | `post_controller.py` → Blueprint `"post"` |
+
+**ルール:**
+- ファイル名のサフィックスとクラス名のサフィックスは一致させる（例: `*_client.py` には `*Client` クラス）
+- infrastructure層のファイルが増えた場合は、サフィックス単位でサブディレクトリへの分割を検討する
 
 ### ファイルヘッダコメント
 

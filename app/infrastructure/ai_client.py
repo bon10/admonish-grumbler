@@ -2,7 +2,7 @@
 [infrastructure] AI分析クライアント
 
 概要:
-  Google Gemini APIを使った投稿分析を担当する。
+  Google Gemini APIを使った投稿分析を担当する外部APIクライアント。
   domain層のai_prompt_builderで構築したプロンプトとスキーマを使い、
   Gemini APIにリクエストを送信し、構造化されたJSON分析結果を返す。
 """
@@ -18,7 +18,7 @@ from app.domain.services.ai_prompt_builder import ANALYSIS_SCHEMA, build_prompt
 logger = logging.getLogger(__name__)
 
 
-class AIService:
+class AIClient:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
