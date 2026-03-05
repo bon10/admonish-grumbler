@@ -1,3 +1,10 @@
+"""
+[infrastructure] ユーザーリポジトリ
+
+概要:
+  UserエンティティのMongoDB永続化を担当する。
+  ユーザーの保存・ユーザー名による検索・重複チェックを提供する。
+"""
 import logging
 
 from flask import current_app

@@ -1,9 +1,18 @@
+"""
+[usecase] サマリーユースケース
+
+概要:
+  AI要約(Summary)の生成・取得・フィードバック保存に関するアプリケーションロジックを制御する。
+  週次・月次サマリーの非同期生成(start → run_generation)と、
+  スケジューラ用の同期生成(generate_weekly/monthly_summary)の両方を提供する。
+  投稿をプレーンテキストに変換し、AIServiceで分析、結果をSummaryRepositoryに保存する。
+"""
 import logging
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 
-from app.domain.services.ai_service import AIService
+from app.infrastructure.ai_client import AIService
 from app.infrastructure.post_repository import PostRepository
 from app.infrastructure.summary_repository import SummaryRepository
 from app.domain.model.summary import Summary

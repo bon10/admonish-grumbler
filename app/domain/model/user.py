@@ -1,7 +1,13 @@
-from flask_login import UserMixin
+"""
+[domain] ユーザーエンティティ
+
+概要:
+  アプリケーションの利用者を表すドメインモデル。
+  認証情報(username, password)とアバター画像を保持する。
+"""
 
 
-class User(UserMixin):
+class User:
     def __init__(self, id, username=None, password=None, avatar=None):
         self.id = id
         self.username = username

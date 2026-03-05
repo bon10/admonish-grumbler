@@ -1,3 +1,11 @@
+"""
+[infrastructure] サマリーリポジトリ
+
+概要:
+  SummaryエンティティのMongoDB永続化を担当する。
+  サマリーの保存・全件取得・ID検索・タイプ別検索・最新取得・
+  サマリー更新・フィードバック更新・期間重複チェックを提供する。
+"""
 from datetime import datetime
 
 from bson import ObjectId

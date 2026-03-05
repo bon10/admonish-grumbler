@@ -1,3 +1,11 @@
+"""
+[interface] ユーザーコントローラ
+
+概要:
+  ユーザー設定・登録に関するHTTPエンドポイントを定義するFlask Blueprint。
+  GET/POST /settings(表示名・メール設定)、GET/POST /signup(新規ユーザー登録)を提供する。
+  認証・ログイン機能は現在コメントアウトされており、将来的に有効化予定。
+"""
 import logging
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for

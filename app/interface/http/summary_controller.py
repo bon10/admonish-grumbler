@@ -1,3 +1,12 @@
+"""
+[interface] サマリーコントローラ
+
+概要:
+  AI要約(Summary)に関するHTTPエンドポイントを定義するFlask Blueprint。
+  GET /summaries(一覧)、GET /summary/<id>(詳細)、POST /summary/<id>/feedback(フィードバック)、
+  POST /summary/generate(非同期生成開始)、GET /summary/<id>/status(生成状況確認)を提供する。
+  サマリー生成はバックグラウンドスレッドで実行し、クライアントはポーリングで完了を確認する。
+"""
 import threading
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for

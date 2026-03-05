@@ -1,3 +1,11 @@
+"""
+[infrastructure] 投稿リポジトリ
+
+概要:
+  PostエンティティのMongoDB永続化を担当する。
+  投稿の保存・全件取得・ページネーション取得・日付範囲検索・
+  ID検索・更新・削除の各CRUD操作を提供する。
+"""
 from datetime import datetime
 
 from bson import ObjectId
@@ -46,6 +54,16 @@ class PostRepository:
             post = Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
             posts.append(post)
         return posts
+
+    def find_by_id(self, id):
+        data = self.post.find_one({"_id": ObjectId(id)})
+        if data:
+            return Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
+        return None
+
+    def update_by_id(self, id, content):
+        result = self.post.update_one({"_id": ObjectId(id)}, {"$set": {"content": content}})
+        return result.modified_count > 0
 
     def delete_by_id(self, id):
         """

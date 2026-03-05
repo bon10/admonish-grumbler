@@ -1,3 +1,11 @@
+"""
+[interface] トップページコントローラ
+
+概要:
+  トップページ(投稿一覧)のHTTPエンドポイントを定義するFlask Blueprint。
+  GET /(トップページ)、GET /page/<n>(ページネーション)を提供する。
+  PostInteractorから投稿データを取得し、テンプレートに渡す。
+"""
 import math
 
 from flask import Blueprint, render_template

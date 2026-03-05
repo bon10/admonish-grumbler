@@ -1,3 +1,11 @@
+"""
+[infrastructure] Flaskアプリケーションファクトリ
+
+概要:
+  create_app()でFlaskアプリの初期化を行う。
+  DB接続(MongoDB)、Blueprint登録、スケジューラ起動、セッション初期化を担当。
+  アプリケーション全体のエントリーポイント。
+"""
 import os
 import random
 import string

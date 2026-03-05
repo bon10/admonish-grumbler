@@ -1,3 +1,10 @@
+"""
+[infrastructure] メッセージ変換ユーティリティ
+
+概要:
+  投稿テキストのMarkdown→HTML変換と、テキスト中のURLをリンクタグに変換する処理を提供する。
+  外部ライブラリ(markdown)に依存するため、infrastructure層に配置している。
+"""
 import re
 
 from markdown import markdown

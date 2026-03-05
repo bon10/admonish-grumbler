@@ -1,11 +1,12 @@
-import json
-import logging
-import os
+"""
+[domain] AI分析用プロンプトビルダー
 
-from google import genai
-from google.genai import types
-
-logger = logging.getLogger(__name__)
+概要:
+  投稿分析に使用するプロンプト文とレスポンススキーマを定義する。
+  build_prompt()でカウンセラー視点の分析指示を組み立て、
+  ANALYSIS_SCHEMAでAIの出力形式(スコア・トピック・アドバイス等)を規定する。
+  外部ライブラリに依存しない純粋なドメインサービス。
+"""
 
 ANALYSIS_SCHEMA = {
     "type": "object",
@@ -63,35 +64,3 @@ def build_prompt(posts_text, period_type, period_label, previous_feedback=None):
 【投稿一覧】({period_type}サマリー)
 {posts_text}
 """
-
-
-class AIService:
-    def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is not set")
-        self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-2.5-flash"
-
-    def analyze_posts(self, posts_text, period_type, period_label, previous_feedback=None):
-        prompt = build_prompt(posts_text, period_type, period_label, previous_feedback)
-
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=ANALYSIS_SCHEMA,
-                    temperature=0.7,
-                ),
-            )
-            result = json.loads(response.text)
-            # Clamp scores to valid ranges
-            result["stress_score"] = max(0, min(100, result.get("stress_score", 50)))
-            result["happiness_score"] = max(0, min(100, result.get("happiness_score", 50)))
-            result["sentiment_score"] = max(-1.0, min(1.0, result.get("sentiment_score", 0.0)))
-            return result
-        except Exception as e:
-            logger.error(f"Gemini API error: {e}")
-            raise

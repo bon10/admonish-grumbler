@@ -4,7 +4,8 @@
       "Bash(pip uninstall:*)",
       "Bash(pip install:*)",
       "WebSearch",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(python -c:*)"
     ],
     "deny": [],
     "ask": []

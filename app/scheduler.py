@@ -1,3 +1,10 @@
+"""
+[infrastructure] 定期サマリー生成スケジューラ
+
+概要:
+  APSchedulerを使い、週次(毎週日曜23:00 UTC)・月次(月末23:30 UTC)で
+  SummaryInteractorを呼び出し、AI要約を自動生成するジョブを管理する。
+"""
 import logging
 
 from flask_apscheduler import APScheduler

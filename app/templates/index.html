@@ -31,14 +31,8 @@
       {{ post.content | safe }}
     </div>
     <div class="post-actions">
-      <a class="action-reply" href="#">
-        <span class="icon is-small"><i class="fas fa-reply"></i></span>
-      </a>
-      <a class="action-retweet" href="#">
-        <span class="icon is-small"><i class="fas fa-retweet"></i></span>
-      </a>
-      <a class="action-like" href="#">
-        <span class="icon is-small"><i class="fas fa-heart"></i></span>
+      <a class="action-edit edit-post-button" data-post-id="{{ post.id }}" href="#">
+        <span class="icon is-small"><i class="fas fa-edit"></i></span>
       </a>
       <a class="action-delete delete-post-button" data-post-id="{{ post.id }}" href="#">
         <span class="icon is-small"><i class="fas fa-trash"></i></span>
