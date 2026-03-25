@@ -51,12 +51,25 @@
     </a>
   {% endif %}
 
-  {% for page in range(1, data.total_pages + 1) %}
+  {# 省略付きページ番号: 先頭・末尾 + 現在ページ前後2ページを表示 #}
+  {% set pages = [] %}
+  {% for p in range(1, data.total_pages + 1) %}
+    {% if p <= 2 or p > data.total_pages - 2 or (p >= data.current_page - 2 and p <= data.current_page + 2) %}
+      {% if pages.append(p) %}{% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% set prev = [0] %}
+  {% for page in pages %}
+    {% if page - prev[-1] > 1 %}
+      <span class="page-ellipsis">…</span>
+    {% endif %}
     {% if page == data.current_page %}
       <a class="page-link is-current" href="/page/{{ page }}">{{ page }}</a>
     {% else %}
       <a class="page-link" href="/page/{{ page }}">{{ page }}</a>
     {% endif %}
+    {% if prev.append(page) %}{% endif %}
   {% endfor %}
 
   {% if data.current_page < data.total_pages %}
@@ -64,6 +77,12 @@
       次へ &nbsp;<i class="fas fa-chevron-right"></i>
     </a>
   {% endif %}
+
+  <form class="page-jump" onsubmit="var p=parseInt(this.querySelector('input').value);if(p>=1&&p<={{ data.total_pages }})location.href='/page/'+p;return false;">
+    <input class="page-jump-input" type="number" min="1" max="{{ data.total_pages }}" placeholder="{{ data.current_page }}" aria-label="ページ番号">
+    <button class="page-jump-btn" type="submit">Go</button>
+    <span class="page-jump-total">/ {{ data.total_pages }}</span>
+  </form>
 </nav>
 {% endif %}
 

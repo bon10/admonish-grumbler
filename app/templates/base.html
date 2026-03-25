@@ -37,6 +37,12 @@
           </a>
         </li>
         <li>
+          <a href="/dashboard" class="{% if request.endpoint and request.endpoint.startswith('dashboard.') %}is-active{% endif %}">
+            <span class="icon"><i class="fas fa-tachometer-alt"></i></span>
+            <span>ダッシュボード</span>
+          </a>
+        </li>
+        <li>
           <a href="/settings" class="{% if request.endpoint == 'user.settings' %}is-active{% endif %}">
             <span class="icon"><i class="fas fa-cog"></i></span>
             <span>設定</span>

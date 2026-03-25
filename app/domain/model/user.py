@@ -8,10 +8,11 @@
 
 
 class User:
-    def __init__(self, id, username=None, password=None, avatar=None):
+    def __init__(self, id, username=None, password=None, avatar=None, email=None):
         self.id = id
         self.username = username
         self.password = password
+        self.email = email
         if avatar:
             self.avatar = avatar
         else:

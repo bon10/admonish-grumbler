@@ -6,6 +6,7 @@
   DB接続(MongoDB)、Blueprint登録、スケジューラ起動、セッション初期化を担当。
   アプリケーション全体のエントリーポイント。
 """
+
 import os
 import random
 import string
@@ -36,23 +37,32 @@ def create_app():
     # login_manager.login_view = "user.login"
 
     with app.app_context():
-        from .interface.http import index_controller, post_controller, summary_controller, user_controller
+        from .interface.http import (
+            dashboard_controller,
+            index_controller,
+            post_controller,
+            summary_controller,
+            user_controller,
+        )
 
     app.register_blueprint(user_controller.bp)
     app.register_blueprint(index_controller.bp)
     app.register_blueprint(post_controller.bp)
     app.register_blueprint(summary_controller.bp)
+    app.register_blueprint(dashboard_controller.bp)
 
     # Initialize APScheduler for periodic summary generation
-    from .scheduler import init_scheduler
-    init_scheduler(app)
+    # Flaskのreloaderは親プロセス+子プロセスの2重起動になるため、
+    # 子プロセス(実際にリクエストを処理する側)でのみスケジューラを起動する
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
+        from .scheduler import init_scheduler
+
+        init_scheduler(app)
 
     @app.before_request
     def init_session():
         if "name" not in session:
-            session["name"] = "".join(
-                random.choices(string.ascii_letters + string.digits, k=12)
-            )
+            session["name"] = "".join(random.choices(string.ascii_letters + string.digits, k=12))
         if "email" not in session:
             session["email"] = ""
 

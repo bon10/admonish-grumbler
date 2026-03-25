@@ -5,6 +5,7 @@
   APSchedulerを使い、週次(毎週日曜23:00 UTC)・月次(月末23:30 UTC)で
   SummaryInteractorを呼び出し、AI要約を自動生成するジョブを管理する。
 """
+
 import logging
 
 from flask_apscheduler import APScheduler
@@ -13,13 +14,46 @@ logger = logging.getLogger(__name__)
 scheduler = APScheduler()
 
 
+def _send_summary_emails(summary_id):
+    """サマリー生成完了後、メールアドレス登録済みの全ユーザーに結果を送信する"""
+    try:
+        from app.infrastructure.email_client import EmailClient
+        from app.infrastructure.summary_repository import SummaryRepository
+        from app.infrastructure.user_repository import UserRepository
+
+        summary_repo = SummaryRepository()
+        summary = summary_repo.find_by_id(summary_id)
+        if not summary:
+            logger.warning(f"Summary {summary_id} not found, skipping email")
+            return
+
+        user_repo = UserRepository()
+        users_with_email = user_repo.find_all_with_email()
+        if not users_with_email:
+            logger.info("No users with email registered, skipping email send")
+            return
+
+        email_client = EmailClient()
+        sent_count = 0
+        for user in users_with_email:
+            if email_client.send_summary_email(user.email, summary):
+                sent_count += 1
+
+        logger.info(f"Summary emails sent: {sent_count}/{len(users_with_email)}")
+    except Exception as e:
+        logger.error(f"Failed to send summary emails: {e}")
+
+
 def generate_weekly(app):
     with app.app_context():
         from app.usecase.summary_interactor import SummaryInteractor
+
         logger.info("Running scheduled weekly summary generation")
         try:
             interactor = SummaryInteractor()
-            interactor.generate_weekly_summary()
+            summary_id = interactor.generate_weekly_summary()
+            if summary_id:
+                _send_summary_emails(summary_id)
         except Exception as e:
             logger.error(f"Scheduled weekly summary failed: {e}")
 
@@ -27,10 +61,13 @@ def generate_weekly(app):
 def generate_monthly(app):
     with app.app_context():
         from app.usecase.summary_interactor import SummaryInteractor
+
         logger.info("Running scheduled monthly summary generation")
         try:
             interactor = SummaryInteractor()
-            interactor.generate_monthly_summary()
+            summary_id = interactor.generate_monthly_summary()
+            if summary_id:
+                _send_summary_emails(summary_id)
         except Exception as e:
             logger.error(f"Scheduled monthly summary failed: {e}")
 
@@ -47,6 +84,8 @@ def init_scheduler(app):
         day_of_week="sun",
         hour=23,
         minute=0,
+        misfire_grace_time=None,
+        coalesce=True,
     )
 
     # Monthly: last day of month at 23:30 UTC
@@ -58,6 +97,8 @@ def init_scheduler(app):
         day="last",
         hour=23,
         minute=30,
+        misfire_grace_time=None,
+        coalesce=True,
     )
 
     scheduler.start()

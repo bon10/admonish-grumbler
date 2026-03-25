@@ -42,4 +42,5 @@ urllib3==2.2.0
 Werkzeug==2.3.4
 WTForms==3.0.1
 google-genai
+sendgrid
 zipp==3.15.0

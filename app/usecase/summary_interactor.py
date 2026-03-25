@@ -7,15 +7,16 @@
   スケジューラ用の同期生成(generate_weekly/monthly_summary)の両方を提供する。
   投稿をプレーンテキストに変換し、AIClientで分析、結果をSummaryRepositoryに保存する。
 """
+
 import logging
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 
+from app.domain.model.summary import Summary
 from app.infrastructure.ai_client import AIClient
 from app.infrastructure.post_repository import PostRepository
 from app.infrastructure.summary_repository import SummaryRepository
-from app.domain.model.summary import Summary
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +82,13 @@ class SummaryInteractor:
 
         if not posts:
             logger.info(f"No posts found for {summary_type} summary ({period_start} - {period_end})")
-            summary_repo.update_summary(summary_id, {
-                "status": "failed",
-                "content_analysis": "この期間には投稿がありませんでした。",
-            })
+            summary_repo.update_summary(
+                summary_id,
+                {
+                    "status": "failed",
+                    "content_analysis": "この期間には投稿がありませんでした。",
+                },
+            )
             return
 
         # Convert posts to plain text
@@ -105,12 +109,14 @@ class SummaryInteractor:
         scores_history = []
         for s in reversed(past_summaries):
             if s.status == "completed":
-                scores_history.append({
-                    "date": s.period_end.strftime("%m/%d"),
-                    "stress": s.stress_score,
-                    "happiness": s.happiness_score,
-                    "sentiment": s.sentiment_score,
-                })
+                scores_history.append(
+                    {
+                        "date": s.period_end.strftime("%m/%d"),
+                        "stress": s.stress_score,
+                        "happiness": s.happiness_score,
+                        "sentiment": s.sentiment_score,
+                    }
+                )
         # Keep last 12 data points for the trend chart
         scores_history = scores_history[-12:]
 
@@ -119,35 +125,82 @@ class SummaryInteractor:
             result = ai_service.analyze_posts(posts_text, summary_type, period_label, previous_feedback)
 
             # Append current scores to history
-            scores_history.append({
-                "date": period_end.strftime("%m/%d"),
-                "stress": result["stress_score"],
-                "happiness": result["happiness_score"],
-                "sentiment": result["sentiment_score"],
-            })
+            scores_history.append(
+                {
+                    "date": period_end.strftime("%m/%d"),
+                    "stress": result["stress_score"],
+                    "happiness": result["happiness_score"],
+                    "sentiment": result["sentiment_score"],
+                }
+            )
 
-            summary_repo.update_summary(summary_id, {
-                "post_count": len(posts),
-                "stress_score": result["stress_score"],
-                "happiness_score": result["happiness_score"],
-                "sentiment_score": result["sentiment_score"],
-                "emoji_expression": result["emoji_expression"],
-                "top_topics": result["top_topics"],
-                "content_analysis": result["content_analysis"],
-                "advice": result["advice"],
-                "encouragement": result["encouragement"],
-                "scores_history": scores_history,
-                "status": "completed",
-            })
+            summary_repo.update_summary(
+                summary_id,
+                {
+                    "post_count": len(posts),
+                    "stress_score": result["stress_score"],
+                    "happiness_score": result["happiness_score"],
+                    "sentiment_score": result["sentiment_score"],
+                    "emoji_expression": result["emoji_expression"],
+                    "top_topics": result["top_topics"],
+                    "content_analysis": result["content_analysis"],
+                    "advice": result["advice"],
+                    "encouragement": result["encouragement"],
+                    "scores_history": scores_history,
+                    "status": "completed",
+                },
+            )
             logger.info(f"{summary_type} summary generated: {summary_id}")
 
         except Exception as e:
             logger.error(f"Failed to generate {summary_type} summary: {e}")
-            summary_repo.update_summary(summary_id, {
-                "post_count": len(posts),
-                "status": "failed",
-                "content_analysis": f"サマリー生成中にエラーが発生しました: {str(e)}",
-            })
+            summary_repo.update_summary(
+                summary_id,
+                {
+                    "post_count": len(posts),
+                    "status": "failed",
+                    "content_analysis": f"サマリー生成中にエラーが発生しました: {str(e)}",
+                },
+            )
+
+    def get_dashboard_data(self, summary_type):
+        """ダッシュボード用にサマリーのスコア推移データを集約して返す"""
+        summary_repo = SummaryRepository()
+        summaries = summary_repo.find_by_type(summary_type)
+
+        # completedのみ、古い順にソート
+        completed = [s for s in summaries if s.status == "completed"]
+        completed.reverse()
+
+        labels = []
+        stress = []
+        happiness = []
+        sentiment = []
+        for s in completed:
+            labels.append(s.period_end.strftime("%m/%d"))
+            stress.append(s.stress_score)
+            happiness.append(s.happiness_score)
+            sentiment.append(s.sentiment_score)
+
+        latest = None
+        if completed:
+            s = completed[-1]
+            latest = {
+                "stress_score": s.stress_score,
+                "happiness_score": s.happiness_score,
+                "sentiment_score": s.sentiment_score,
+                "emoji_expression": s.emoji_expression,
+                "period_label": f"{s.period_start.strftime('%Y/%m/%d')} — {s.period_end.strftime('%Y/%m/%d')}",
+                "post_count": s.post_count,
+            }
+
+        return {
+            "labels": labels,
+            "stress": stress,
+            "happiness": happiness,
+            "sentiment": sentiment,
+            "latest": latest,
+        }
 
     # Keep synchronous methods for scheduler compatibility
     def generate_weekly_summary(self):
@@ -201,12 +254,14 @@ class SummaryInteractor:
         scores_history = []
         for s in reversed(past_summaries):
             if s.status == "completed":
-                scores_history.append({
-                    "date": s.period_end.strftime("%m/%d"),
-                    "stress": s.stress_score,
-                    "happiness": s.happiness_score,
-                    "sentiment": s.sentiment_score,
-                })
+                scores_history.append(
+                    {
+                        "date": s.period_end.strftime("%m/%d"),
+                        "stress": s.stress_score,
+                        "happiness": s.happiness_score,
+                        "sentiment": s.sentiment_score,
+                    }
+                )
         # Keep last 12 data points for the trend chart
         scores_history = scores_history[-12:]
 
@@ -215,12 +270,14 @@ class SummaryInteractor:
             result = ai_service.analyze_posts(posts_text, summary_type, period_label, previous_feedback)
 
             # Append current scores to history
-            scores_history.append({
-                "date": period_end.strftime("%m/%d"),
-                "stress": result["stress_score"],
-                "happiness": result["happiness_score"],
-                "sentiment": result["sentiment_score"],
-            })
+            scores_history.append(
+                {
+                    "date": period_end.strftime("%m/%d"),
+                    "stress": result["stress_score"],
+                    "happiness": result["happiness_score"],
+                    "sentiment": result["sentiment_score"],
+                }
+            )
 
             summary = Summary(
                 type=summary_type,

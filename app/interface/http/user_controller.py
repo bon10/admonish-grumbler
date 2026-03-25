@@ -6,12 +6,14 @@
   GET/POST /settings(表示名・メール設定)、GET/POST /signup(新規ユーザー登録)を提供する。
   認証・ログイン機能は現在コメントアウトされており、将来的に有効化予定。
 """
+
 import logging
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app import bcrypt
 from app.domain.model.user import User
+from app.infrastructure.user_repository import UserRepository
 from app.usecase.user_interactor import UserAlreadyExistsError, UserInteractor
 
 # from flask_login import current_user, login_user
@@ -29,6 +31,11 @@ def settings():
         if username:
             session["name"] = username
         session["email"] = email
+
+        # メールアドレスをDBに永続化
+        user_repo = UserRepository()
+        user_repo.update_email(username, email)
+
         flash("設定を保存しました")
         return redirect(url_for("user.settings"))
     return render_template("settings.html")
