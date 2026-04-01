@@ -6,6 +6,7 @@
   domain層のai_prompt_builderで構築したプロンプトとスキーマを使い、
   Gemini APIにリクエストを送信し、構造化されたJSON分析結果を返す。
 """
+
 import json
 import logging
 import os
@@ -26,8 +27,8 @@ class AIClient:
         self.client = genai.Client(api_key=api_key)
         self.model = "gemini-2.5-flash"
 
-    def analyze_posts(self, posts_text, period_type, period_label, previous_feedback=None):
-        prompt = build_prompt(posts_text, period_type, period_label, previous_feedback)
+    def analyze_posts(self, posts_text, period_type, period_label, previous_feedback=None, search_history_text=None):
+        prompt = build_prompt(posts_text, period_type, period_label, previous_feedback, search_history_text)
 
         try:
             response = self.client.models.generate_content(

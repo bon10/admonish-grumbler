@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 from app.domain.model.summary import Summary
 from app.infrastructure.ai_client import AIClient
 from app.infrastructure.post_repository import PostRepository
+from app.infrastructure.search_history_repository import SearchHistoryRepository
 from app.infrastructure.summary_repository import SummaryRepository
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,22 @@ logger = logging.getLogger(__name__)
 def html_to_plain_text(html):
     soup = BeautifulSoup(html, "html.parser")
     return soup.get_text(separator=" ", strip=True)
+
+
+def _build_search_history_text(period_start, period_end):
+    """該当期間の検索履歴をテキスト化する"""
+    try:
+        repo = SearchHistoryRepository()
+        histories = repo.find_by_date_range(period_start, period_end)
+        if not histories:
+            return None
+        lines = []
+        for h in histories:
+            lines.append(f"- [{h.searched_at.strftime('%m/%d %H:%M')}] {h.query}")
+        return "\n".join(lines)
+    except Exception as e:
+        logger.warning(f"Failed to fetch search history: {e}")
+        return None
 
 
 class SummaryInteractor:
@@ -120,9 +137,13 @@ class SummaryInteractor:
         # Keep last 12 data points for the trend chart
         scores_history = scores_history[-12:]
 
+        search_history_text = _build_search_history_text(period_start, period_end)
+
         try:
             ai_service = AIClient()
-            result = ai_service.analyze_posts(posts_text, summary_type, period_label, previous_feedback)
+            result = ai_service.analyze_posts(
+                posts_text, summary_type, period_label, previous_feedback, search_history_text
+            )
 
             # Append current scores to history
             scores_history.append(
@@ -265,9 +286,13 @@ class SummaryInteractor:
         # Keep last 12 data points for the trend chart
         scores_history = scores_history[-12:]
 
+        search_history_text = _build_search_history_text(period_start, period_end)
+
         try:
             ai_service = AIClient()
-            result = ai_service.analyze_posts(posts_text, summary_type, period_label, previous_feedback)
+            result = ai_service.analyze_posts(
+                posts_text, summary_type, period_label, previous_feedback, search_history_text
+            )
 
             # Append current scores to history
             scores_history.append(

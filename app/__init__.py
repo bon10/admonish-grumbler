@@ -41,6 +41,7 @@ def create_app():
             dashboard_controller,
             index_controller,
             post_controller,
+            search_controller,
             summary_controller,
             user_controller,
         )
@@ -50,6 +51,7 @@ def create_app():
     app.register_blueprint(post_controller.bp)
     app.register_blueprint(summary_controller.bp)
     app.register_blueprint(dashboard_controller.bp)
+    app.register_blueprint(search_controller.bp)
 
     # Initialize APScheduler for periodic summary generation
     # Flaskのreloaderは親プロセス+子プロセスの2重起動になるため、

@@ -43,6 +43,12 @@
           </a>
         </li>
         <li>
+          <a href="/search" class="{% if request.endpoint and request.endpoint.startswith('search.') %}is-active{% endif %}">
+            <span class="icon"><i class="fas fa-search"></i></span>
+            <span>検索</span>
+          </a>
+        </li>
+        <li>
           <a href="/settings" class="{% if request.endpoint == 'user.settings' %}is-active{% endif %}">
             <span class="icon"><i class="fas fa-cog"></i></span>
             <span>設定</span>

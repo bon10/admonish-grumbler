@@ -5,7 +5,8 @@
       "Bash(pip install:*)",
       "WebSearch",
       "Bash(test:*)",
-      "Bash(python -c:*)"
+      "Bash(python -c:*)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": []

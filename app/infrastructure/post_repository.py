@@ -6,6 +6,8 @@
   投稿の保存・全件取得・ページネーション取得・日付範囲検索・
   ID検索・更新・削除の各CRUD操作を提供する。
 """
+
+import re
 from datetime import datetime
 
 from bson import ObjectId
@@ -46,9 +48,7 @@ class PostRepository:
         return count
 
     def find_by_date_range(self, start, end):
-        post_data = self.post.find({
-            "timestamp": {"$gte": start, "$lte": end}
-        }).sort("timestamp", 1)
+        post_data = self.post.find({"timestamp": {"$gte": start, "$lte": end}}).sort("timestamp", 1)
         posts = []
         for data in post_data:
             post = Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
@@ -73,3 +73,12 @@ class PostRepository:
         """
         result = self.post.delete_one({"_id": ObjectId(id)})
         return result
+
+    def search_by_keyword(self, keyword):
+        escaped = re.escape(keyword)
+        post_data = self.post.find({"content": {"$regex": escaped, "$options": "i"}}).sort("timestamp", -1)
+        posts = []
+        for data in post_data:
+            post = Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
+            posts.append(post)
+        return posts
