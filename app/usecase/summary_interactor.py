@@ -72,8 +72,9 @@ class SummaryInteractor:
 
     def start_monthly_summary(self):
         now = datetime.now()
-        period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        period_end = now
+        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        period_end = first_of_this_month - timedelta(microseconds=1)
+        period_start = period_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         period_label = f"{period_start.strftime('%Y年%m月')}の1ヶ月間"
         return self._start_summary("monthly", period_start, period_end, period_label)
 
@@ -233,8 +234,9 @@ class SummaryInteractor:
 
     def generate_monthly_summary(self):
         now = datetime.now()
-        period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        period_end = now
+        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        period_end = first_of_this_month - timedelta(microseconds=1)
+        period_start = period_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         period_label = f"{period_start.strftime('%Y年%m月')}の1ヶ月間"
         return self._generate_summary("monthly", period_start, period_end, period_label)
 
