@@ -1,8 +1,16 @@
+"""
+[infrastructure] OGP(Open Graph Protocol)クライアント
+
+概要:
+  URLからOGPメタデータ(タイトル・説明・画像)を取得し、
+  プレビュー用HTMLを生成する。投稿内のリンクにリッチプレビューを付与するために使用される。
+"""
+
 import requests
 from bs4 import BeautifulSoup
 
 
-class PostService:
+class OpenGraphClient:
     @staticmethod
     def get_opengraph_data(url):
         try:
@@ -31,7 +39,7 @@ class PostService:
 
     @staticmethod
     def generate_opengraph_preview(url):
-        opengraph_data = PostService.get_opengraph_data(url)
+        opengraph_data = OpenGraphClient.get_opengraph_data(url)
         if opengraph_data:
             preview_html = f"""
                 <div class="og box">

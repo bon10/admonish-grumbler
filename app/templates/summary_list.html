@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}
+  GRUMBLER - AIサマリー
+{% endblock %}
+
+{% block content %}
+<div class="settings-header">
+  <h1 class="settings-title">AIサマリー</h1>
+  <p class="settings-subtitle">あなたの愚痴をAIが分析し、メンタル状態の変化を可視化します</p>
+</div>
+
+<!-- Manual Generate -->
+<div class="summary-generate-bar">
+  <div class="generate-form">
+    <select id="generate-type" class="form-input generate-select">
+      <option value="weekly">週次サマリー</option>
+      <option value="monthly">月次サマリー</option>
+    </select>
+    <button type="button" id="btn-generate" class="btn-generate">
+      <span class="icon"><i class="fas fa-magic"></i></span>
+      サマリー生成
+    </button>
+  </div>
+</div>
+
+<!-- Generating Overlay -->
+<div id="generating-overlay" class="generating-overlay" style="display:none;">
+  <div class="generating-modal">
+    <div class="generating-spinner"></div>
+    <p class="generating-message">サマリーを生成中です...</p>
+    <p class="generating-hint">AIが投稿を分析しています。しばらくお待ちください。</p>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+{% if summaries %}
+<div class="summary-feed">
+  {% for summary in summaries %}
+  <a href="{{ url_for('summary.detail', summary_id=summary.id) }}" class="summary-card {% if summary.status == 'failed' %}is-failed{% elif summary.status == 'generating' %}is-generating{% endif %}">
+    <div class="summary-card-header">
+      <span class="summary-type-badge {% if summary.type == 'monthly' %}is-monthly{% endif %}">
+        {{ "月次" if summary.type == "monthly" else "週次" }}
+      </span>
+      <span class="summary-period">
+        {{ summary.period_start.strftime('%Y/%m/%d') }} — {{ summary.period_end.strftime('%Y/%m/%d') }}
+      </span>
+      {% if summary.emoji_expression %}
+      <span class="summary-emoji">{{ summary.emoji_expression }}</span>
+      {% endif %}
+    </div>
+
+    {% if summary.status == 'completed' %}
+    <div class="summary-meters">
+      <div class="meter-item">
+        <span class="meter-label">ストレス</span>
+        <div class="meter-bar">
+          <div class="meter-fill meter-stress" style="width: {{ summary.stress_score }}%"></div>
+        </div>
+        <span class="meter-value">{{ summary.stress_score }}</span>
+      </div>
+      <div class="meter-item">
+        <span class="meter-label">幸福度</span>
+        <div class="meter-bar">
+          <div class="meter-fill meter-happiness" style="width: {{ summary.happiness_score }}%"></div>
+        </div>
+        <span class="meter-value">{{ summary.happiness_score }}</span>
+      </div>
+    </div>
+
+    {% if summary.top_topics %}
+    <div class="summary-topics">
+      {% for topic in summary.top_topics[:3] %}
+      <span class="topic-tag">{{ topic }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="summary-card-meta">
+      <span>{{ summary.post_count }}件の投稿</span>
+      {% if summary.feedback %}
+      <span class="has-feedback"><i class="fas fa-comment-dots"></i> フィードバック済</span>
+      {% endif %}
+    </div>
+    {% elif summary.status == 'generating' %}
+    <div class="summary-generating-msg"><i class="fas fa-spinner fa-spin"></i> 生成中...</div>
+    {% else %}
+    <div class="summary-failed-msg">生成に失敗しました</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="summary-empty">
+  <div class="summary-empty-icon"><i class="fas fa-chart-line"></i></div>
+  <p>まだサマリーがありません</p>
+  <p class="summary-empty-hint">上のボタンからサマリーを生成してみましょう</p>
+</div>
+{% endif %}
+
+<script>
+(function() {
+  var btn = document.getElementById('btn-generate');
+  var overlay = document.getElementById('generating-overlay');
+  var select = document.getElementById('generate-type');
+
+  btn.addEventListener('click', function() {
+    btn.disabled = true;
+    overlay.style.display = 'flex';
+
+    var formData = new FormData();
+    formData.append('type', select.value);
+
+    fetch('{{ url_for("summary.generate") }}', {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.summary_id) {
+        pollStatus(data.summary_id);
+      } else {
+        onFail('サマリーの生成を開始できませんでした');
+      }
+    })
+    .catch(function() {
+      onFail('通信エラーが発生しました');
+    });
+  });
+
+  function pollStatus(summaryId) {
+    var interval = setInterval(function() {
+      fetch('/summary/' + summaryId + '/status')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.status === 'completed') {
+            clearInterval(interval);
+            overlay.style.display = 'none';
+            showToast('サマリーを生成しました', 'success');
+            location.reload();
+          } else if (data.status === 'failed') {
+            clearInterval(interval);
+            onFail('サマリーの生成に失敗しました（投稿がないか、エラーが発生しました）');
+          }
+        })
+        .catch(function() {
+          clearInterval(interval);
+          onFail('ステータスの取得に失敗しました');
+        });
+    }, 3000);
+  }
+
+  function onFail(msg) {
+    overlay.style.display = 'none';
+    btn.disabled = false;
+    showToast(msg, 'error');
+  }
+
+  function showToast(msg, type) {
+    var toast = document.createElement('div');
+    toast.className = 'flash-toast';
+    if (type === 'error') {
+      toast.style.borderLeftColor = 'var(--danger)';
+    }
+    toast.textContent = msg;
+    var main = document.querySelector('.main-content');
+    if (main) {
+      main.insertBefore(toast, main.firstChild);
+    }
+    setTimeout(function() { toast.remove(); }, 5000);
+  }
+})();
+</script>
+{% endblock %}

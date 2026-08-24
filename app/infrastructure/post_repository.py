@@ -1,3 +1,13 @@
+"""
+[infrastructure] 投稿リポジトリ
+
+概要:
+  PostエンティティのMongoDB永続化を担当する。
+  投稿の保存・全件取得・ページネーション取得・日付範囲検索・
+  ID検索・更新・削除の各CRUD操作を提供する。
+"""
+
+import re
 from datetime import datetime
 
 from bson import ObjectId
@@ -37,6 +47,24 @@ class PostRepository:
         count = self.post.count_documents({})
         return count
 
+    def find_by_date_range(self, start, end):
+        post_data = self.post.find({"timestamp": {"$gte": start, "$lte": end}}).sort("timestamp", 1)
+        posts = []
+        for data in post_data:
+            post = Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
+            posts.append(post)
+        return posts
+
+    def find_by_id(self, id):
+        data = self.post.find_one({"_id": ObjectId(id)})
+        if data:
+            return Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
+        return None
+
+    def update_by_id(self, id, content):
+        result = self.post.update_one({"_id": ObjectId(id)}, {"$set": {"content": content}})
+        return result.modified_count > 0
+
     def delete_by_id(self, id):
         """
         指定されたIDのポストを削除します。
@@ -45,3 +73,12 @@ class PostRepository:
         """
         result = self.post.delete_one({"_id": ObjectId(id)})
         return result
+
+    def search_by_keyword(self, keyword):
+        escaped = re.escape(keyword)
+        post_data = self.post.find({"content": {"$regex": escaped, "$options": "i"}}).sort("timestamp", -1)
+        posts = []
+        for data in post_data:
+            post = Post(content=data["content"], timestamp=data["timestamp"], id=str(data["_id"]))
+            posts.append(post)
+        return posts

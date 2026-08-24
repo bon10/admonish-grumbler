@@ -21,3 +21,7 @@ logs/
 Thumbs.db
 
 mongodb_data
+
+# Claude Code（各自のローカル設定・個人用スキルのため共有しない）
+.claude/settings.local.json
+.claude/skills/simple-commit/

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}
+  GRUMBLER - 検索
+{% endblock %}
+
+{% block content %}
+<div class="search-page">
+  <div class="settings-header">
+    <h1 class="settings-title">検索</h1>
+    <p class="settings-subtitle">投稿をキーワードで検索できます</p>
+  </div>
+
+  <form class="search-form" action="{{ url_for('search.index') }}" method="GET">
+    <div class="search-input-wrapper">
+      <i class="fas fa-search search-input-icon"></i>
+      <input class="form-input search-input" type="text" name="q" value="{{ query }}"
+        placeholder="キーワードを入力..." autofocus>
+      <button class="btn-generate" type="submit">検索</button>
+    </div>
+  </form>
+
+  {% if query %}
+  <div class="search-results-header">
+    <span class="search-results-count">{{ results|length }}件の結果</span>
+    <span class="search-results-query">「{{ query }}」</span>
+  </div>
+
+  {% if results %}
+  <div class="post-feed">
+    {% for post in results %}
+    <article class="post-card">
+      <div class="post-header">
+        <span class="post-timestamp">{{ post.timestamp.strftime('%Y/%m/%d %H:%M') }}</span>
+      </div>
+      <div class="post-body">
+        {{ post.content | safe }}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="summary-empty">
+    <div class="summary-empty-icon"><i class="fas fa-search"></i></div>
+    <p>該当する投稿が見つかりませんでした</p>
+    <p class="summary-empty-hint">別のキーワードで試してみてください</p>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

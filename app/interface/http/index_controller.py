@@ -1,6 +1,13 @@
+"""
+[interface] トップページコントローラ
+
+概要:
+  トップページ(投稿一覧)のHTTPエンドポイントを定義するFlask Blueprint。
+  GET /(トップページ)、GET /page/<n>(ページネーション)を提供する。
+  PostInteractorから投稿データを取得し、テンプレートに渡す。
+"""
 import math
 
-import flask_login
 from flask import Blueprint, render_template
 
 from app.usecase.post_interactor import PostInteractor
@@ -25,7 +32,7 @@ def get_posts_data(page_number):
 
 
 @bp.route("/")
-@flask_login.login_required
+# @flask_login.login_required
 def home():
     page_number = 1
     data = get_posts_data(page_number)
@@ -33,7 +40,7 @@ def home():
 
 
 @bp.route("/page/<int:page_number>")
-@flask_login.login_required
+# @flask_login.login_required
 def page(page_number):
     data = get_posts_data(page_number)
     return render_template("index.html", data=data)

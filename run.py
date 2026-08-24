@@ -1,17 +1,19 @@
 import logging
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
+# create_app()内のログが表示されるよう、先にlogging設定を行う
+if os.environ.get('FLASK_DEBUG') == 'false':
+    logging.basicConfig(level=logging.INFO)
+else:
+    logging.basicConfig(level=logging.DEBUG)
+
 from app import create_app
 
 app = create_app()
-
-if os.environ.get('FLASK_DEBUG') == 'false':
-    app.debug = False
-
-if app.debug:
-    logging.basicConfig(level=logging.DEBUG)
-else:
-    logging.basicConfig(level=logging.INFO)
 
 
 if __name__ == '__main__':

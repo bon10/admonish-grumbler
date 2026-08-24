@@ -1,3 +1,10 @@
+"""
+[usecase] ユーザーユースケース
+
+概要:
+  ユーザーの登録と認証に関するアプリケーションロジックを制御する。
+  重複ユーザー名チェック付きの登録処理と、パスワード照合による認証処理を提供する。
+"""
 import logging
 
 from flask_bcrypt import check_password_hash

@@ -1,98 +1,90 @@
 {% extends "base.html" %}
 
 {% block title %}
-  admonish-grumbler
+  GRUMBLER - Let it all out
 {% endblock %}
 
 {% block content %}
-<div class="columns">
-  <div class="column is-one-quarter">
-    <!-- 左メニュー -->
-    <aside class="menu">
-      <p class="menu-label">Menu</p>
-      <ul class="menu-list">
-        <li><a href="#">ホーム</a></li>
-        <li><a href="#">プロフィール</a></li>
-        <li><a href="#">設定</a></li>
-      </ul>
-    </aside>
-  </div>
-  <div class="column is-9">
-    <!-- 投稿フォーム -->
-    <div class="box">
-      <form id="postForm">
-        <div class="field">
-          <div class="control">
-            <textarea class="textarea" placeholder="さあ、愚痴を入力してください！どんどん吐き出してスッキリしましょう！" name="content"
-            width=""></textarea>
-          </div>
-        </div>
-        <div class="field">
-          <div class="control">
-            <button class="button is-primary" type="submit">投稿</button>
-          </div>
-        </div>
-      </form>
+<!-- 投稿フォーム -->
+<div class="post-form-card">
+  <form id="postForm">
+    <div>
+      <textarea class="textarea" placeholder="さあ、愚痴を入力してください！どんどん吐き出してスッキリしましょう！" name="content"></textarea>
     </div>
-    <!-- 投稿リスト -->
-    <section class="section">
-      {% for post in data.posts %}
-      <article class="media box">
-          <figure class="media-left">
-              <p class="image is-64x64">
-                  <!-- replace with your avatar url -->
-                  <img src="{{ session["avatar"] }}" alt="User avatar">
-              </p>
-          </figure>
-          <div class="media-content">
-              <div class="content">
-                  <p>
-                      <strong>{{ session["name"] }}</strong> <small>{{ post.timestamp }}</small>
-                      <br>
-                      {{ post.content | safe }}
-                  </p>
-              </div>
-              <nav class="level is-mobile">
-                  <div class="level-left">
-                      <a class="level-item">
-                          <span class="icon is-small"><i class="fas fa-reply"></i></span>
-                      </a>
-                      <a class="level-item">
-                          <span class="icon is-small"><i class="fas fa-retweet"></i></span>
-                      </a>
-                      <a class="level-item">
-                          <span class="icon is-small"><i class="fas fa-heart"></i></span>
-                      </a>
-                      <div class="level-right">
-                          <a class="level-item delete-post-button" data-post-id="{{ post.id }}" href="#">
-                              <span class="icon is-small"><i class="fas fa-trash"></i></span>
-                          </a>
-                      </div>
-                  </div>
-              </nav>
-          </div>
-      </article>
-      {% endfor %}
-      <!-- ページネーションの表示 -->
-      <div class="pagination is-centered">
-        {% if data.current_page > 1 %}
-          <a class="pagination-link" href="/page/{{ data.current_page - 1 }}">前のページ</a>
-        {% endif %}
-
-        {% for page in range(1, data.total_pages + 1) %}
-          {% if page == data.current_page %}
-            <a class="pagination-link is-current" href="/page/{{ page }}">{{ page }}</a>
-          {% else %}
-            <a class="pagination-link" href="/page/{{ page }}">{{ page }}</a>
-          {% endif %}
-        {% endfor %}
-
-        {% if data.current_page < data.total_pages %}
-          <a class="pagination-link" href="/page/{{ data.current_page + 1 }}">次のページ</a>
-        {% endif %}
-      </div>
-    </section>
-  </div>
+    <div class="post-form-footer">
+      <span class="post-as">投稿者: <strong>{{ session.get("name", "Anonymous") }}</strong></span>
+      <button class="btn-post" type="submit">投稿</button>
+    </div>
+  </form>
 </div>
+
+<!-- 投稿リスト -->
+<div class="post-feed">
+  {% for post in data.posts %}
+  <article class="post-card">
+    <div class="post-header">
+      <span class="post-username">{{ session.get("name", "Anonymous") }}</span>
+      <span class="post-separator">&middot;</span>
+      <span class="post-timestamp">{{ post.timestamp }}</span>
+    </div>
+    <div class="post-body">
+      {{ post.content | safe }}
+    </div>
+    <div class="post-actions">
+      <a class="action-edit edit-post-button" data-post-id="{{ post.id }}" href="#">
+        <span class="icon is-small"><i class="fas fa-edit"></i></span>
+      </a>
+      <a class="action-delete delete-post-button" data-post-id="{{ post.id }}" href="#">
+        <span class="icon is-small"><i class="fas fa-trash"></i></span>
+      </a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<!-- ページネーション -->
+{% if data.total_pages > 1 %}
+<nav class="pagination-wrapper">
+  {% if data.current_page > 1 %}
+    <a class="page-link page-nav" href="/page/{{ data.current_page - 1 }}">
+      <i class="fas fa-chevron-left"></i>&nbsp; 前へ
+    </a>
+  {% endif %}
+
+  {# 省略付きページ番号: 先頭・末尾 + 現在ページ前後2ページを表示 #}
+  {% set pages = [] %}
+  {% for p in range(1, data.total_pages + 1) %}
+    {% if p <= 2 or p > data.total_pages - 2 or (p >= data.current_page - 2 and p <= data.current_page + 2) %}
+      {% if pages.append(p) %}{% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% set prev = [0] %}
+  {% for page in pages %}
+    {% if page - prev[-1] > 1 %}
+      <span class="page-ellipsis">…</span>
+    {% endif %}
+    {% if page == data.current_page %}
+      <a class="page-link is-current" href="/page/{{ page }}">{{ page }}</a>
+    {% else %}
+      <a class="page-link" href="/page/{{ page }}">{{ page }}</a>
+    {% endif %}
+    {% if prev.append(page) %}{% endif %}
+  {% endfor %}
+
+  {% if data.current_page < data.total_pages %}
+    <a class="page-link page-nav" href="/page/{{ data.current_page + 1 }}">
+      次へ &nbsp;<i class="fas fa-chevron-right"></i>
+    </a>
+  {% endif %}
+
+  <form class="page-jump" onsubmit="var p=parseInt(this.querySelector('input').value);if(p>=1&&p<={{ data.total_pages }})location.href='/page/'+p;return false;">
+    <input class="page-jump-input" type="number" min="1" max="{{ data.total_pages }}" placeholder="{{ data.current_page }}" aria-label="ページ番号">
+    <button class="page-jump-btn" type="submit">Go</button>
+    <span class="page-jump-total">/ {{ data.total_pages }}</span>
+  </form>
+</nav>
+{% endif %}
+
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 {% endblock %}
