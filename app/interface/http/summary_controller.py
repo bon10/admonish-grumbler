@@ -6,6 +6,7 @@
   GET /summaries(一覧)、GET /summary/<id>(詳細)、POST /summary/<id>/feedback(フィードバック)、
   POST /summary/generate(非同期生成開始)、GET /summary/<id>/status(生成状況確認)を提供する。
   サマリー生成はバックグラウンドスレッドで実行し、クライアントはポーリングで完了を確認する。
+  フィードバックの指示への正規化もAI呼び出しを伴うため、バックグラウンドスレッドで実行する。
 """
 import threading
 
@@ -36,8 +37,17 @@ def detail(summary_id):
 def feedback(summary_id):
     feedback_text = request.form.get("feedback", "").strip()
     if feedback_text:
-        summary_interactor.save_feedback(summary_id, feedback_text)
+        needs_consolidation = summary_interactor.save_feedback(summary_id, feedback_text)
         flash("フィードバックを保存しました")
+        if needs_consolidation:
+            # 正規化はAI呼び出しを伴うため、ユーザーを待たせないようバックグラウンドで実行する
+            app = current_app._get_current_object()
+
+            def consolidate_in_background():
+                with app.app_context():
+                    summary_interactor.consolidate_feedback()
+
+            threading.Thread(target=consolidate_in_background).start()
     return redirect(url_for("summary.detail", summary_id=summary_id))
 
 

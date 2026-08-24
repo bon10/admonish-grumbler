@@ -6,6 +6,8 @@
   週次・月次サマリーの非同期生成(start → run_generation)と、
   スケジューラ用の同期生成(generate_weekly/monthly_summary)の両方を提供する。
   投稿をプレーンテキストに変換し、AIClientで分析、結果をSummaryRepositoryに保存する。
+  ユーザーのフィードバックは指示リストへ正規化してFeedbackProfileに蓄積し、
+  以降すべての分析へ継続的に注入する。
 """
 
 import logging
@@ -13,13 +15,19 @@ from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 
+from app.domain.model.feedback_profile import FeedbackInstruction, apply_limits
 from app.domain.model.summary import Summary
+from app.domain.services.feedback_prompt_builder import build_instructions_text
 from app.infrastructure.ai_client import AIClient
+from app.infrastructure.feedback_profile_repository import FeedbackProfileRepository
 from app.infrastructure.post_repository import PostRepository
 from app.infrastructure.search_history_repository import SearchHistoryRepository
 from app.infrastructure.summary_repository import SummaryRepository
 
 logger = logging.getLogger(__name__)
+
+# 未正規化フィードバックがこの件数に達したら、生成を待たずに正規化を実行する
+PENDING_CONSOLIDATION_THRESHOLD = 3
 
 
 def html_to_plain_text(html):
@@ -43,6 +51,87 @@ def _build_search_history_text(period_start, period_end):
         return None
 
 
+def _consolidate_feedback():
+    """
+    未正規化のフィードバックを既存の指示リストへ統合し、統合後のプロファイルを返す。
+
+    AIが返した各指示のsource_idsをたどって統合元の言及回数・作成日時を引き継ぐことで、
+    正規化を繰り返しても「ユーザーが何度求めたか」が失われないようにする。
+    """
+    repo = FeedbackProfileRepository()
+    profile = repo.load()
+    if not profile.pending:
+        return profile
+
+    try:
+        merged = AIClient().merge_feedback(profile.instructions, [p.text for p in profile.pending])
+    except Exception as e:
+        # 正規化に失敗してもpendingは消さないため、次の生成時に再試行される
+        logger.error(f"Failed to consolidate feedback: {e}")
+        return profile
+
+    existing_by_id = {i.id: i for i in profile.instructions}
+    claimed_ids = set()
+    now = datetime.now()
+    instructions = []
+
+    for item in merged:
+        text = (item.get("text") or "").strip()
+        if not text:
+            continue
+
+        # 同じ既存指示が複数の出力に割り当てられてもIDが重複しないよう、先着順で引き当てる
+        sources = []
+        for source_id in item.get("source_ids", []):
+            source = existing_by_id.get(source_id)
+            if source and source_id not in claimed_ids:
+                claimed_ids.add(source_id)
+                sources.append(source)
+
+        reinforced = item.get("reinforced", False)
+        instructions.append(
+            FeedbackInstruction(
+                id=sources[0].id if sources else None,
+                text=text,
+                category=item.get("category"),
+                scope=item.get("scope"),
+                persistent=item.get("persistent", True),
+                # 統合元の言及回数を合算し、今回改めて言及されたものだけ1回加算する
+                weight=sum(s.weight for s in sources) + (1 if reinforced else 0),
+                created_at=min((s.created_at for s in sources), default=now),
+                last_reinforced_at=now if reinforced else max((s.last_reinforced_at for s in sources), default=now),
+            )
+        )
+
+    instructions = apply_limits(instructions)
+    repo.save_instructions(instructions, [p.id for p in profile.pending])
+    logger.info(f"Feedback consolidated: {len(profile.pending)} pending -> {len(instructions)} instructions")
+
+    profile.instructions = instructions
+    profile.pending = []
+    return profile
+
+
+def _build_feedback_instructions_text(summary_type):
+    """該当サマリー種別に効くフィードバック指示を、分析プロンプトへ注入する形に整えて返す"""
+    try:
+        profile = _consolidate_feedback()
+        return build_instructions_text(profile.instructions_for(summary_type))
+    except Exception as e:
+        # フィードバックが取れなくても分析自体は続行させる
+        logger.warning(f"Failed to build feedback instructions: {e}")
+        return None
+
+
+def _drop_used_transient_instructions(summary_type):
+    """今回の生成で使い切った1回きりの指示を破棄する"""
+    try:
+        repo = FeedbackProfileRepository()
+        repo.remove_instructions(repo.load().transient_instruction_ids(summary_type))
+    except Exception as e:
+        logger.warning(f"Failed to drop transient feedback instructions: {e}")
+
+
 class SummaryInteractor:
     def get_all_summaries(self):
         repo = SummaryRepository()
@@ -60,8 +149,22 @@ class SummaryInteractor:
         return summary.status
 
     def save_feedback(self, summary_id, feedback):
-        repo = SummaryRepository()
-        repo.update_feedback(summary_id, feedback)
+        """
+        フィードバックを保存し、正規化を今すぐ実行すべきかを返す。
+
+        生テキストはサマリー文書に残しつつ(どのサマリーへの感想かを追える形で残すため)、
+        以降の分析へ恒久的に反映するためプロファイルの未正規化キューにも積む。
+        正規化はAI呼び出しを伴うので、実行の判断と実施は呼び出し側に委ねる。
+        """
+        SummaryRepository().update_feedback(summary_id, feedback)
+
+        profile_repo = FeedbackProfileRepository()
+        profile_repo.add_pending(feedback, summary_id)
+        return len(profile_repo.load().pending) >= PENDING_CONSOLIDATION_THRESHOLD
+
+    def consolidate_feedback(self):
+        """未正規化フィードバックを指示リストへ統合する(バックグラウンド実行を想定)"""
+        _consolidate_feedback()
 
     def start_weekly_summary(self):
         now = datetime.now()
@@ -116,11 +219,8 @@ class SummaryInteractor:
             timestamp = post.timestamp.strftime("%Y/%m/%d %H:%M")
             posts_text += f"{i}. [{timestamp}] {plain}\n"
 
-        # Get previous feedback for prompt injection
-        previous_feedback = None
-        latest = summary_repo.find_latest_by_type(summary_type)
-        if latest and latest.feedback:
-            previous_feedback = latest.feedback
+        # 過去のフィードバックを正規化した指示を、毎回まとめてプロンプトへ注入する
+        feedback_instructions_text = _build_feedback_instructions_text(summary_type)
 
         # Build scores history from past summaries
         past_summaries = summary_repo.find_by_type(summary_type)
@@ -143,7 +243,7 @@ class SummaryInteractor:
         try:
             ai_service = AIClient()
             result = ai_service.analyze_posts(
-                posts_text, summary_type, period_label, previous_feedback, search_history_text
+                posts_text, summary_type, period_label, feedback_instructions_text, search_history_text
             )
 
             # Append current scores to history
@@ -173,6 +273,7 @@ class SummaryInteractor:
                 },
             )
             logger.info(f"{summary_type} summary generated: {summary_id}")
+            _drop_used_transient_instructions(summary_type)
 
         except Exception as e:
             logger.error(f"Failed to generate {summary_type} summary: {e}")
@@ -266,11 +367,8 @@ class SummaryInteractor:
             timestamp = post.timestamp.strftime("%Y/%m/%d %H:%M")
             posts_text += f"{i}. [{timestamp}] {plain}\n"
 
-        # Get previous feedback for prompt injection
-        previous_feedback = None
-        latest = summary_repo.find_latest_by_type(summary_type)
-        if latest and latest.feedback:
-            previous_feedback = latest.feedback
+        # 過去のフィードバックを正規化した指示を、毎回まとめてプロンプトへ注入する
+        feedback_instructions_text = _build_feedback_instructions_text(summary_type)
 
         # Build scores history from past summaries
         past_summaries = summary_repo.find_by_type(summary_type)
@@ -293,7 +391,7 @@ class SummaryInteractor:
         try:
             ai_service = AIClient()
             result = ai_service.analyze_posts(
-                posts_text, summary_type, period_label, previous_feedback, search_history_text
+                posts_text, summary_type, period_label, feedback_instructions_text, search_history_text
             )
 
             # Append current scores to history
@@ -324,6 +422,7 @@ class SummaryInteractor:
             )
             summary_id = summary_repo.save(summary)
             logger.info(f"{summary_type} summary generated: {summary_id}")
+            _drop_used_transient_instructions(summary_type)
             return summary_id
 
         except Exception as e:

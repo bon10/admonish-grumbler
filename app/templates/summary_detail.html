@@ -124,7 +124,7 @@
     {% else %}
     <form method="POST" action="{{ url_for('summary.feedback', summary_id=summary.id) }}">
       <div class="summary-text-card">
-        <p class="feedback-hint">このサマリーについて感想を残すと、次回のAI分析に反映されます。</p>
+        <p class="feedback-hint">このサマリーについて感想を残すと、以降のAI分析に反映され続けます。</p>
         <textarea class="form-input feedback-textarea" name="feedback"
           placeholder="例: ストレスの原因は仕事より人間関係かも / もう少し具体的なアドバイスが欲しい"></textarea>
         <div class="feedback-submit-row">
