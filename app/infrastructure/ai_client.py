@@ -28,7 +28,9 @@ class AIClient:
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set")
         self.client = genai.Client(api_key=api_key)
-        self.model = "gemini-2.5-flash"
+        # 挙動を固定したいので安定版を明示する。
+        # 旧モデル(gemini-2.5-flash)は新規利用が打ち切られ、APIから移行先として案内された版。
+        self.model = "gemini-3.6-flash"
 
     def analyze_posts(
         self, posts_text, period_type, period_label, feedback_instructions_text=None, search_history_text=None
