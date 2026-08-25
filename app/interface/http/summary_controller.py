@@ -4,7 +4,8 @@
 概要:
   AI要約(Summary)に関するHTTPエンドポイントを定義するFlask Blueprint。
   GET /summaries(一覧)、GET /summary/<id>(詳細)、POST /summary/<id>/feedback(フィードバック)、
-  POST /summary/generate(非同期生成開始)、GET /summary/<id>/status(生成状況確認)を提供する。
+  POST /summary/generate(生成)、GET /summary/<id>/status(生成状況確認)、
+  POST /feedback-instructions/<id>/delete(記憶した指示の削除)を提供する。
   サマリー生成はAI呼び出しの完了を待って結果を返す。
   フィードバックの指示への正規化もAI呼び出しを伴うため、投稿者を待たせないよう
   バックグラウンドスレッドで実行する。
@@ -53,6 +54,13 @@ def feedback(summary_id):
 
             threading.Thread(target=consolidate_in_background).start()
     return redirect(url_for("summary.detail", summary_id=summary_id))
+
+
+@bp.route("/feedback-instructions/<instruction_id>/delete", methods=["POST"])
+def delete_feedback_instruction(instruction_id):
+    summary_interactor.delete_feedback_instruction(instruction_id)
+    flash("指示を削除しました")
+    return redirect(url_for("user.settings"))
 
 
 @bp.route("/summary/generate", methods=["POST"])
