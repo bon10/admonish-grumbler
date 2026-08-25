@@ -1,20 +1,10 @@
-import logging
-import os
+"""
+ローカル開発用の起動スクリプト。
 
-from dotenv import load_dotenv
+アプリ本体の組み立ては wsgi.py と共通で、こちらは開発サーバの起動のみを担う。
+"""
 
-load_dotenv(override=True)
+from wsgi import app
 
-# create_app()内のログが表示されるよう、先にlogging設定を行う
-if os.environ.get('FLASK_DEBUG') == 'false':
-    logging.basicConfig(level=logging.INFO)
-else:
-    logging.basicConfig(level=logging.DEBUG)
-
-from app import create_app
-
-app = create_app()
-
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0")
