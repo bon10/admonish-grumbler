@@ -24,7 +24,11 @@ Tweets are stored in MongoDB.
 
 Access to http://localhost:5500 from your browser.
 
-ベースイメージを Python 3.9 から 3.12 に上げたため、それ以前に作った venv ボリュームは作り直す。
+### venv を作り直す
+
+依存パッケージは名前付きボリューム `admonish-grumbler_venv` に入っていて、コンテナを作り直しても残る。
+ベースイメージの Python バージョンを変えた後など、ボリューム内の venv がイメージと食い違って
+起動やパッケージのインストールに失敗するときは、ボリュームごと捨てて作り直す。
 
 ```
 % docker compose down
