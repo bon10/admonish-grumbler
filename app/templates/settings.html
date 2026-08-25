@@ -38,10 +38,10 @@
     サマリーに残した感想から、AIが分析時に守る指示を組み立てています。不要になった指示は削除できます。
   </p>
 
-  {% if feedback.pending_count %}
+  {% if feedback.pending_count and feedback.instructions %}
   <p class="instruction-pending-note">
     <i class="fas fa-hourglass-half"></i>
-    まだ指示になっていない感想が{{ feedback.pending_count }}件あります。次回のサマリー生成時に取り込まれます。
+    未反映の感想が{{ feedback.pending_count }}件あります。次回のサマリー生成時に指示へ加わります。
   </p>
   {% endif %}
 
@@ -71,6 +71,13 @@
     </li>
     {% endfor %}
   </ul>
+  {% elif feedback.pending_count %}
+  <div class="settings-card instruction-empty">
+    <p>
+      <i class="fas fa-hourglass-half"></i>
+      感想を{{ feedback.pending_count }}件お預かりしています。次回のサマリー生成時に指示へ変換され、ここに並びます。
+    </p>
+  </div>
   {% else %}
   <div class="settings-card instruction-empty">
     <p>まだ指示はありません。サマリー画面で感想を残すと、ここに追加されます。</p>
