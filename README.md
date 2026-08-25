@@ -24,18 +24,6 @@ Tweets are stored in MongoDB.
 
 Access to http://localhost:5500 from your browser.
 
-### venv を作り直す
-
-依存パッケージは名前付きボリューム `admonish-grumbler_venv` に入っていて、コンテナを作り直しても残る。
-ベースイメージの Python バージョンを変えた後など、ボリューム内の venv がイメージと食い違って
-起動やパッケージのインストールに失敗するときは、ボリュームごと捨てて作り直す。
-
-```
-% docker compose down
-% docker volume rm admonish-grumbler_venv
-% docker compose up -d
-```
-
 If you add a new package, please update requirements.txt.
 
 ```
@@ -46,19 +34,19 @@ pip freeze > requirements.txt
 
 `.env.sample` をコピーして `.env` を作る。
 
-| 変数 | 用途 |
-| --- | --- |
-| `APP_SECRET_KEY` | セッションの署名鍵。変更すると既存のログインセッションは無効になる |
-| `MONGO_URI` | MongoDB Atlas の接続文字列 |
-| `GEMINI_API_KEY` | サマリー生成に使う AI の API キー |
-| `SENDGRID_API_KEY` / `SENDGRID_FROM_EMAIL` | サマリーのメール送信 |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` | ログインできる唯一の利用者 |
-| `CRON_SECRET` | 定期サマリー生成エンドポイントの呼び出し元認証 |
+| 変数                                       | 用途                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| `APP_SECRET_KEY`                           | セッションの署名鍵。変更すると既存のログインセッションは無効になる |
+| `MONGO_URI`                                | MongoDB Atlas の接続文字列                                         |
+| `GEMINI_API_KEY`                           | サマリー生成に使う AI の API キー                                  |
+| `SENDGRID_API_KEY` / `SENDGRID_FROM_EMAIL` | サマリーのメール送信                                               |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH`   | ログインできる唯一の利用者                                         |
+| `CRON_SECRET`                              | 定期サマリー生成エンドポイントの呼び出し元認証                     |
 
-`ADMIN_PASSWORD_HASH` は次のコマンドで生成する。
+`ADMIN_PASSWORD_HASH` は次のコマンドで生成する。依存パッケージはコンテナ側にあるため、コンテナ内で実行する。
 
 ```
-python scripts/generate_password_hash.py
+% docker exec -it admonish-grumbler-app python scripts/generate_password_hash.py
 ```
 
 ## ログイン
@@ -73,10 +61,10 @@ python scripts/generate_password_hash.py
 
 週次・月次サマリーの自動生成は、**起動のきっかけだけが環境によって違い、生成処理は共通**（`SummaryInteractor.generate_scheduled_summary`）。
 
-| | 起動するもの | 設定 |
-| --- | --- | --- |
-| ローカル | アプリ内スケジューラ（`app/scheduler.py`） | `ENABLE_IN_PROCESS_SCHEDULER=true` |
-| 本番（Vercel） | Vercel Cron が下記 URL を叩く | `vercel.json` |
+|                | 起動するもの                               | 設定                               |
+| -------------- | ------------------------------------------ | ---------------------------------- |
+| ローカル       | アプリ内スケジューラ（`app/scheduler.py`） | `ENABLE_IN_PROCESS_SCHEDULER=true` |
+| 本番（Vercel） | Vercel Cron が下記 URL を叩く              | `vercel.json`                      |
 
 Vercel はリクエスト単位で関数を起動し常駐プロセスを持てないため、アプリ内に常駐スケジューラを置けない。
 一方ローカルは常駐できるので、アプリ内スケジューラで同じ生成処理を呼ぶ。
@@ -84,10 +72,10 @@ Vercel はリクエスト単位で関数を起動し常駐プロセスを持て�
 **発火時刻の定義は `vercel.json` の `crons` だけ**。アプリ内スケジューラはそこから cron 式を読んで登録するので、
 時刻を変えるときは `vercel.json` だけを直せばローカルにも反映される。
 
-| エンドポイント | cron 式（UTC） | 実際の発火（JST） |
-| --- | --- | --- |
-| `/api/cron/summary/weekly` | `0 15 * * 0` | **毎週月曜 00:00** |
-| `/api/cron/summary/monthly` | `30 0 1 * *` | 毎月 1 日 09:30（前月分を生成） |
+| エンドポイント              | cron 式（UTC） | 実際の発火（JST）               |
+| --------------------------- | -------------- | ------------------------------- |
+| `/api/cron/summary/weekly`  | `0 15 * * 0`   | **毎週月曜 00:00**              |
+| `/api/cron/summary/monthly` | `30 0 1 * *`   | 毎月 1 日 09:30（前月分を生成） |
 
 週次の要件は「JST の月曜 0 時」。
 **Vercel Cron は常に UTC で解釈する**ため、cron 式は 9 時間戻して日曜 15:00 UTC と書いてある。
