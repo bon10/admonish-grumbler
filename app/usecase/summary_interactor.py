@@ -3,8 +3,8 @@
 
 概要:
   AI要約(Summary)の生成・取得・フィードバック保存に関するアプリケーションロジックを制御する。
-  週次・月次サマリーの非同期生成(start → run_generation)と、
-  スケジューラ用の同期生成(generate_weekly/monthly_summary)の両方を提供する。
+  生成処理はstart_summary → run_generationの1本で、
+  画面からの生成と定期実行(generate_scheduled_summary)の両方がこれを共有する。
   投稿をプレーンテキストに変換し、AIClientで分析、結果をSummaryRepositoryに保存する。
   ユーザーのフィードバックは指示リストへ正規化してFeedbackProfileに蓄積し、
   以降すべての分析へ継続的に注入する。
@@ -19,15 +19,23 @@ from app.domain.model.feedback_profile import FeedbackInstruction, apply_limits
 from app.domain.model.summary import Summary
 from app.domain.services.feedback_prompt_builder import build_instructions_text
 from app.infrastructure.ai_client import AIClient
+from app.infrastructure.email_client import EmailClient
 from app.infrastructure.feedback_profile_repository import FeedbackProfileRepository
 from app.infrastructure.post_repository import PostRepository
 from app.infrastructure.search_history_repository import SearchHistoryRepository
 from app.infrastructure.summary_repository import SummaryRepository
+from app.infrastructure.user_repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
 # 未正規化フィードバックがこの件数に達したら、生成を待たずに正規化を実行する
 PENDING_CONSOLIDATION_THRESHOLD = 3
+
+# 定期実行がこの時間内に同じ種別のサマリーを作っていれば、今回の実行は何もしない。
+# 外部cronは同一回を重複起動しうるため、生成とメール送信の二重実行を防ぐ。
+# 週次(7日間隔)・月次(約30日間隔)のどちらの実行間隔より十分短いので、
+# 次回の正規の実行まで抑止してしまうことはない。
+SCHEDULED_GENERATION_GUARD = timedelta(hours=12)
 
 
 def html_to_plain_text(html):
@@ -150,6 +158,31 @@ def _drop_used_transient_instructions(summary_type):
         logger.warning(f"Failed to drop transient feedback instructions: {e}")
 
 
+def _send_summary_emails(summary_id):
+    """生成できたサマリーを、メールアドレスを登録済みの利用者に送信する"""
+    try:
+        summary = SummaryRepository().find_by_id(summary_id)
+        if not summary:
+            logger.warning(f"Summary {summary_id} not found, skipping email")
+            return
+
+        users_with_email = UserRepository().find_all_with_email()
+        if not users_with_email:
+            logger.info("No users with email registered, skipping email send")
+            return
+
+        email_client = EmailClient()
+        sent_count = 0
+        for user in users_with_email:
+            if email_client.send_summary_email(user.email, summary):
+                sent_count += 1
+
+        logger.info(f"Summary emails sent: {sent_count}/{len(users_with_email)}")
+    except Exception as e:
+        # メール送信の失敗でサマリー生成自体を失敗扱いにはしない
+        logger.error(f"Failed to send summary emails: {e}")
+
+
 class SummaryInteractor:
     def get_all_summaries(self):
         repo = SummaryRepository()
@@ -213,24 +246,29 @@ class SummaryInteractor:
         """ユーザーが不要と判断した指示を削除し、以降の分析へ渡らないようにする"""
         FeedbackProfileRepository().remove_instructions([instruction_id])
 
-    def start_weekly_summary(self):
+    def _period_of(self, summary_type):
+        """種別ごとの集計期間と、プロンプトに渡す期間ラベルを求める"""
         now = datetime.now()
+
+        if summary_type == "monthly":
+            # 月次は「先月1ヶ月ぶん」を対象にする。実行時点の月はまだ終わっていないため
+            first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_end = first_of_this_month - timedelta(microseconds=1)
+            period_start = period_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            return period_start, period_end, f"{period_start.strftime('%Y年%m月')}の1ヶ月間"
+
         period_end = now
         period_start = now - timedelta(days=7)
-        period_label = f"{period_start.strftime('%Y/%m/%d')}〜{period_end.strftime('%Y/%m/%d')}の1週間"
-        return self._start_summary("weekly", period_start, period_end, period_label)
+        return period_start, period_end, f"{period_start.strftime('%Y/%m/%d')}〜{period_end.strftime('%Y/%m/%d')}の1週間"
 
-    def start_monthly_summary(self):
-        now = datetime.now()
-        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        period_end = first_of_this_month - timedelta(microseconds=1)
-        period_start = period_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        period_label = f"{period_start.strftime('%Y年%m月')}の1ヶ月間"
-        return self._start_summary("monthly", period_start, period_end, period_label)
+    def start_summary(self, summary_type):
+        """
+        生成中のサマリーを先に作り、run_generationに渡す引数一式を返す。
 
-    def _start_summary(self, summary_type, period_start, period_end, period_label):
-        """Save a placeholder summary with status='generating' and return its id."""
-        summary_repo = SummaryRepository()
+        器を先に作るのは、生成が終わるまでの間も一覧画面に
+        「生成中」として並べられるようにするため。
+        """
+        period_start, period_end, period_label = self._period_of(summary_type)
         summary = Summary(
             type=summary_type,
             period_start=period_start,
@@ -238,11 +276,11 @@ class SummaryInteractor:
             post_count=0,
             status="generating",
         )
-        summary_id = summary_repo.save(summary)
+        summary_id = SummaryRepository().save(summary)
         return summary_id, summary_type, period_start, period_end, period_label
 
     def run_generation(self, summary_id, summary_type, period_start, period_end, period_label):
-        """Run AI generation (called from background thread with app context)."""
+        """start_summaryで作った器に対してAI生成を実行し、結果を書き込む"""
         post_repo = PostRepository()
         summary_repo = SummaryRepository()
 
@@ -372,115 +410,25 @@ class SummaryInteractor:
             "latest": latest,
         }
 
-    # Keep synchronous methods for scheduler compatibility
-    def generate_weekly_summary(self):
-        now = datetime.now()
-        period_end = now
-        period_start = now - timedelta(days=7)
-        period_label = f"{period_start.strftime('%Y/%m/%d')}〜{period_end.strftime('%Y/%m/%d')}の1週間"
-        return self._generate_summary("weekly", period_start, period_end, period_label)
+    def generate_scheduled_summary(self, summary_type):
+        """
+        定期実行から呼ばれるサマリー生成。生成できた場合はメールも送信する。
 
-    def generate_monthly_summary(self):
-        now = datetime.now()
-        first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        period_end = first_of_this_month - timedelta(microseconds=1)
-        period_start = period_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        period_label = f"{period_start.strftime('%Y年%m月')}の1ヶ月間"
-        return self._generate_summary("monthly", period_start, period_end, period_label)
-
-    def _generate_summary(self, summary_type, period_start, period_end, period_label):
-        post_repo = PostRepository()
+        呼び出し元(cron)は同じ回を重複起動しうるため、直近に同じ種別のサマリーが
+        作られていれば何もしない。戻り値は (実行したか, サマリーID) で、
+        重複起動を弾いた場合は (False, None) を返す。
+        """
         summary_repo = SummaryRepository()
+        if summary_repo.exists_created_since(summary_type, datetime.now() - SCHEDULED_GENERATION_GUARD):
+            logger.info(f"Recent {summary_type} summary already exists, skipping scheduled generation")
+            return False, None
 
-        posts = post_repo.find_by_date_range(period_start, period_end)
+        summary_id, s_type, period_start, period_end, period_label = self.start_summary(summary_type)
+        self.run_generation(summary_id, s_type, period_start, period_end, period_label)
 
-        if not posts:
-            logger.info(f"No posts found for {summary_type} summary ({period_start} - {period_end})")
-            summary = Summary(
-                type=summary_type,
-                period_start=period_start,
-                period_end=period_end,
-                post_count=0,
-                status="failed",
-                content_analysis="この期間には投稿がありませんでした。",
-            )
-            summary_repo.save(summary)
-            return None
+        # 投稿が無い期間や生成失敗時はcompletedにならないため、その回はメールを送らない
+        summary = summary_repo.find_by_id(summary_id)
+        if summary and summary.status == "completed":
+            _send_summary_emails(summary_id)
 
-        # Convert posts to plain text
-        posts_text = ""
-        for i, post in enumerate(posts, 1):
-            plain = html_to_plain_text(post.content)
-            timestamp = post.timestamp.strftime("%Y/%m/%d %H:%M")
-            posts_text += f"{i}. [{timestamp}] {plain}\n"
-
-        # 過去のフィードバックを正規化した指示を、毎回まとめてプロンプトへ注入する
-        feedback_instructions_text = _build_feedback_instructions_text(summary_type)
-
-        # Build scores history from past summaries
-        past_summaries = summary_repo.find_by_type(summary_type)
-        scores_history = []
-        for s in reversed(past_summaries):
-            if s.status == "completed":
-                scores_history.append(
-                    {
-                        "date": s.period_end.strftime("%m/%d"),
-                        "stress": s.stress_score,
-                        "happiness": s.happiness_score,
-                        "sentiment": s.sentiment_score,
-                    }
-                )
-        # Keep last 12 data points for the trend chart
-        scores_history = scores_history[-12:]
-
-        search_history_text = _build_search_history_text(period_start, period_end)
-
-        try:
-            ai_service = AIClient()
-            result = ai_service.analyze_posts(
-                posts_text, summary_type, period_label, feedback_instructions_text, search_history_text
-            )
-
-            # Append current scores to history
-            scores_history.append(
-                {
-                    "date": period_end.strftime("%m/%d"),
-                    "stress": result["stress_score"],
-                    "happiness": result["happiness_score"],
-                    "sentiment": result["sentiment_score"],
-                }
-            )
-
-            summary = Summary(
-                type=summary_type,
-                period_start=period_start,
-                period_end=period_end,
-                post_count=len(posts),
-                stress_score=result["stress_score"],
-                happiness_score=result["happiness_score"],
-                sentiment_score=result["sentiment_score"],
-                emoji_expression=result["emoji_expression"],
-                top_topics=result["top_topics"],
-                content_analysis=result["content_analysis"],
-                advice=result["advice"],
-                encouragement=result["encouragement"],
-                scores_history=scores_history,
-                status="completed",
-            )
-            summary_id = summary_repo.save(summary)
-            logger.info(f"{summary_type} summary generated: {summary_id}")
-            _drop_used_transient_instructions(summary_type)
-            return summary_id
-
-        except Exception as e:
-            logger.error(f"Failed to generate {summary_type} summary: {e}")
-            summary = Summary(
-                type=summary_type,
-                period_start=period_start,
-                period_end=period_end,
-                post_count=len(posts),
-                status="failed",
-                content_analysis=f"サマリー生成中にエラーが発生しました: {str(e)}",
-            )
-            summary_repo.save(summary)
-            return None
+        return True, summary_id

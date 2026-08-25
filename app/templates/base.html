@@ -23,6 +23,8 @@
         <div class="app-brand-tagline">Let it all out</div>
       </div>
 
+      {# ログイン画面では遷移先が無いため、ナビゲーションと利用者情報は隠す #}
+      {% if current_user.is_authenticated %}
       <ul class="nav-menu">
         <li>
           <a href="/" class="{% if request.endpoint == 'index.home' or request.endpoint == 'index.page' %}is-active{% endif %}">
@@ -58,8 +60,9 @@
 
       <div class="sidebar-user">
         <div class="sidebar-user-name">{{ session.get("name", "Anonymous") }}</div>
-        <div class="sidebar-user-label">logged in</div>
+        <a class="sidebar-user-label" href="{{ url_for('user.logout') }}">ログアウト</a>
       </div>
+      {% endif %}
     </aside>
 
     <!-- Main -->
