@@ -2,9 +2,13 @@
 ローカル開発用の起動スクリプト。
 
 アプリ本体の組み立ては wsgi.py と共通で、こちらは開発サーバの起動のみを担う。
+
+デプロイ先(Vercel)はトップレベルに `app` を持つファイルをエントリーポイントとして
+自動検出する。wsgi.py だけが本番の入口だと分かるよう、
+ここでの読み込みは __main__ の中に閉じている。
 """
 
-from wsgi import app
-
 if __name__ == "__main__":
+    from wsgi import app
+
     app.run(debug=True, host="0.0.0.0")

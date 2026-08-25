@@ -1,6 +1,0 @@
-# デプロイ先(Vercel)が読み込むFlaskインスタンスの在り処を明示する。
-# wsgi.pyは既定の探索先に含まれるが、run.pyにもトップレベルのappがあり
-# 自動検出では紛れるため、本番の入口を固定しておく。
-# 依存パッケージはrequirements.txtから解決される。
-[tool.vercel]
-entrypoint = "wsgi:app"
