@@ -123,6 +123,24 @@ def _build_feedback_instructions_text(summary_type):
         return None
 
 
+def _find_summary_safely(summary_repo, summary_id):
+    """未反映フィードバックの記入先サマリーを引く。削除済み・不正なIDでも設定画面を壊さない。"""
+    if not summary_id:
+        return None
+    try:
+        return summary_repo.find_by_id(summary_id)
+    except Exception:
+        return None
+
+
+def _summary_label(summary):
+    """記入先サマリーの表示名。どの期間のサマリーへの感想かを一目でわかるようにする。"""
+    if not summary:
+        return None
+    kind = "月次" if summary.type == "monthly" else "週次"
+    return f"{kind}サマリー（{summary.period_end.strftime('%Y/%m/%d')}）"
+
+
 def _drop_used_transient_instructions(summary_type):
     """今回の生成で使い切った1回きりの指示を破棄する"""
     try:
@@ -168,15 +186,28 @@ class SummaryInteractor:
 
     def get_feedback_profile_view(self):
         """
-        設定画面向けに、AIが記憶している指示と未反映フィードバックの件数を返す。
+        設定画面向けに、AIが記憶している指示と、まだ指示になっていない感想を返す。
 
-        指示と件数で2度DBを読まないよう、1回のロードから両方を組み立てる。
+        未反映の感想は件数だけでは何を書いたか確認できないため、本文と記入先の
+        サマリーを添える。記入日時はサマリー側のfeedback_atを優先する
+        (移行で取り込んだ感想は、キューへ積んだ日時が実際の記入日と食い違うため)。
         """
         profile = FeedbackProfileRepository().load()
-        return {
-            "instructions": profile.sorted_instructions(),
-            "pending_count": len(profile.pending),
-        }
+        summary_repo = SummaryRepository()
+
+        pending = []
+        for item in profile.pending:
+            summary = _find_summary_safely(summary_repo, item.summary_id)
+            pending.append(
+                {
+                    "text": item.text,
+                    "written_at": (summary.feedback_at if summary else None) or item.created_at,
+                    "summary_id": item.summary_id if summary else None,
+                    "summary_label": _summary_label(summary),
+                }
+            )
+
+        return {"instructions": profile.sorted_instructions(), "pending": pending}
 
     def delete_feedback_instruction(self, instruction_id):
         """ユーザーが不要と判断した指示を削除し、以降の分析へ渡らないようにする"""

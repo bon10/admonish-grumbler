@@ -38,11 +38,26 @@
     サマリーに残した感想から、AIが分析時に守る指示を組み立てています。不要になった指示は削除できます。
   </p>
 
-  {% if feedback.pending_count and feedback.instructions %}
-  <p class="instruction-pending-note">
-    <i class="fas fa-hourglass-half"></i>
-    未反映の感想が{{ feedback.pending_count }}件あります。次回のサマリー生成時に指示へ加わります。
-  </p>
+  {% if feedback.pending %}
+  <div class="pending-card">
+    <p class="pending-lead">
+      <i class="fas fa-hourglass-half"></i>
+      感想を{{ feedback.pending|length }}件お預かりしています。次回のサマリー生成時に指示へ変換されます。
+    </p>
+    <ul class="pending-list">
+      {% for item in feedback.pending %}
+      <li class="pending-item">
+        <p class="pending-text">{{ item.text }}</p>
+        <p class="pending-source">
+          {{ item.written_at.strftime('%Y/%m/%d %H:%M') }}
+          {% if item.summary_label %}
+          ・<a href="{{ url_for('summary.detail', summary_id=item.summary_id) }}">{{ item.summary_label }}</a>に記入
+          {% endif %}
+        </p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
 
   {% if feedback.instructions %}
@@ -71,14 +86,7 @@
     </li>
     {% endfor %}
   </ul>
-  {% elif feedback.pending_count %}
-  <div class="settings-card instruction-empty">
-    <p>
-      <i class="fas fa-hourglass-half"></i>
-      感想を{{ feedback.pending_count }}件お預かりしています。次回のサマリー生成時に指示へ変換され、ここに並びます。
-    </p>
-  </div>
-  {% else %}
+  {% elif not feedback.pending %}
   <div class="settings-card instruction-empty">
     <p>まだ指示はありません。サマリー画面で感想を残すと、ここに追加されます。</p>
   </div>
