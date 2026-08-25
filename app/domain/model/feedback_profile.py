@@ -98,10 +98,13 @@ class FeedbackProfile:
         self.pending = pending or []
         self.updated_at = updated_at
 
+    def sorted_instructions(self):
+        """すべての指示を優先度(言及回数→最終言及日)の高い順に返す"""
+        return sorted(self.instructions, key=_priority_key, reverse=True)
+
     def instructions_for(self, summary_type):
         """指定サマリー種別に適用される指示のみを、優先度の高い順に返す"""
-        applicable = [i for i in self.instructions if i.applies_to(summary_type)]
-        return sorted(applicable, key=_priority_key, reverse=True)
+        return [i for i in self.sorted_instructions() if i.applies_to(summary_type)]
 
     def transient_instruction_ids(self, summary_type):
         """

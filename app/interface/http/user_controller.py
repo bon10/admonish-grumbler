@@ -3,7 +3,8 @@
 
 概要:
   ユーザー設定・登録に関するHTTPエンドポイントを定義するFlask Blueprint。
-  GET/POST /settings(表示名・メール設定)、GET/POST /signup(新規ユーザー登録)を提供する。
+  GET/POST /settings(表示名・メール設定・AIが記憶した指示の確認)、
+  GET/POST /signup(新規ユーザー登録)を提供する。
   認証・ログイン機能は現在コメントアウトされており、将来的に有効化予定。
 """
 
@@ -14,6 +15,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from app import bcrypt
 from app.domain.model.user import User
 from app.infrastructure.user_repository import UserRepository
+from app.usecase.summary_interactor import SummaryInteractor
 from app.usecase.user_interactor import UserAlreadyExistsError, UserInteractor
 
 # from flask_login import current_user, login_user
@@ -21,6 +23,7 @@ from app.usecase.user_interactor import UserAlreadyExistsError, UserInteractor
 
 bp = Blueprint("user", __name__)
 user_interactor = UserInteractor()
+summary_interactor = SummaryInteractor()
 
 
 @bp.route("/settings", methods=["GET", "POST"])
@@ -38,7 +41,7 @@ def settings():
 
         flash("設定を保存しました")
         return redirect(url_for("user.settings"))
-    return render_template("settings.html")
+    return render_template("settings.html", feedback=summary_interactor.get_feedback_profile_view())
 
 
 # @login_manager.unauthorized_handler
