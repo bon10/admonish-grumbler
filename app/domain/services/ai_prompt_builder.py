@@ -40,14 +40,15 @@ ANALYSIS_SCHEMA = {
 }
 
 
-def build_prompt(posts_text, period_type, period_label, previous_feedback=None, search_history_text=None):
+def build_prompt(posts_text, period_type, period_label, feedback_instructions_text=None, search_history_text=None):
     feedback_section = ""
-    if previous_feedback:
+    if feedback_instructions_text:
         feedback_section = f"""
 
-【前回のユーザーフィードバック】
-ユーザーは前回のサマリーに対して以下の感想を残しています。この内容を今回の分析に反映してください:
-「{previous_feedback}」
+【ユーザーからの継続的な要望】
+ユーザーが過去のサマリーに対して残した感想を、守るべき指示として整理したものです。
+今回の分析でも必ず守ってください:
+{feedback_instructions_text}
 """
 
     search_section = ""

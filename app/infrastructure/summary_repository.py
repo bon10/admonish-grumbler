@@ -3,7 +3,7 @@
 
 概要:
   SummaryエンティティのMongoDB永続化を担当する。
-  サマリーの保存・全件取得・ID検索・タイプ別検索・最新取得・
+  サマリーの保存・全件取得・ID検索・タイプ別検索・
   サマリー更新・フィードバック更新・期間重複チェックを提供する。
 """
 from datetime import datetime
@@ -79,15 +79,6 @@ class SummaryRepository:
     def find_by_type(self, summary_type):
         data_list = self.collection.find({"type": summary_type}).sort("period_end", -1)
         return [self._to_model(d) for d in data_list]
-
-    def find_latest_by_type(self, summary_type):
-        data = self.collection.find_one(
-            {"type": summary_type, "status": "completed"},
-            sort=[("period_end", -1)],
-        )
-        if data:
-            return self._to_model(data)
-        return None
 
     def update_summary(self, summary_id, data_dict):
         self.collection.update_one(
