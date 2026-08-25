@@ -97,13 +97,17 @@ class SummaryRepository:
         指定時刻以降に作成された同じ種別のサマリーがあるかを返す。
 
         定期実行が同じ回を重複起動したときに二重生成しないための判定に使う。
-        生成に失敗した回も「作成済み」として数える。投稿が無い期間は
-        再実行しても同じ結果になり、やり直す意味がないため。
+
+        数えるのは完了したもの(completed)と生成中のもの(generating)だけで、
+        失敗した回(failed)は数えない。失敗の原因は設定やAPI側の変更など
+        後から直せるものが多く、直したあとすぐ再実行できる必要があるため。
+        生成中を含めるのは、実行中にもう一度起動されて二重に走るのを防ぐため。
         """
         count = self.collection.count_documents(
             {
                 "type": summary_type,
                 "created_at": {"$gte": since},
+                "status": {"$in": ["completed", "generating"]},
             },
             limit=1,
         )
