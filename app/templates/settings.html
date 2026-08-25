@@ -31,4 +31,50 @@
     <button class="btn-save" type="submit">保存する</button>
   </div>
 </form>
+
+<div class="settings-section">
+  <h2 class="settings-section-title"><i class="fas fa-brain"></i> AIが覚えている指示</h2>
+  <p class="settings-section-hint">
+    サマリーに残した感想から、AIが分析時に守る指示を組み立てています。不要になった指示は削除できます。
+  </p>
+
+  {% if feedback.pending_count %}
+  <p class="instruction-pending-note">
+    <i class="fas fa-hourglass-half"></i>
+    まだ指示になっていない感想が{{ feedback.pending_count }}件あります。次回のサマリー生成時に取り込まれます。
+  </p>
+  {% endif %}
+
+  {% if feedback.instructions %}
+  <ul class="instruction-list">
+    {% for instruction in feedback.instructions %}
+    <li class="instruction-item">
+      <div class="instruction-body">
+        <p class="instruction-text">{{ instruction.text }}</p>
+        <div class="instruction-meta">
+          <span class="instruction-badge">{{ instruction.category_label }}</span>
+          <span class="instruction-badge is-scope">{{ instruction.scope_label }}</span>
+          {% if not instruction.persistent %}
+          <span class="instruction-badge is-transient">1回限り</span>
+          {% endif %}
+          <span class="instruction-stat">{{ instruction.weight }}回言及</span>
+          <span class="instruction-stat">最終 {{ instruction.last_reinforced_at.strftime('%Y/%m/%d') }}</span>
+        </div>
+      </div>
+      <form method="POST"
+        action="{{ url_for('summary.delete_feedback_instruction', instruction_id=instruction.id) }}"
+        onsubmit="return confirm('この指示を削除しますか？\n以降のAI分析に反映されなくなります。');">
+        <button type="submit" class="btn-instruction-delete" title="この指示を削除">
+          <i class="fas fa-trash"></i>
+        </button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="settings-card instruction-empty">
+    <p>まだ指示はありません。サマリー画面で感想を残すと、ここに追加されます。</p>
+  </div>
+  {% endif %}
+</div>
 {% endblock %}

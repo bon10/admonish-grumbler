@@ -166,6 +166,22 @@ class SummaryInteractor:
         """未正規化フィードバックを指示リストへ統合する(バックグラウンド実行を想定)"""
         _consolidate_feedback()
 
+    def get_feedback_profile_view(self):
+        """
+        設定画面向けに、AIが記憶している指示と未反映フィードバックの件数を返す。
+
+        指示と件数で2度DBを読まないよう、1回のロードから両方を組み立てる。
+        """
+        profile = FeedbackProfileRepository().load()
+        return {
+            "instructions": profile.sorted_instructions(),
+            "pending_count": len(profile.pending),
+        }
+
+    def delete_feedback_instruction(self, instruction_id):
+        """ユーザーが不要と判断した指示を削除し、以降の分析へ渡らないようにする"""
+        FeedbackProfileRepository().remove_instructions([instruction_id])
+
     def start_weekly_summary(self):
         now = datetime.now()
         period_end = now
