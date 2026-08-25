@@ -3,10 +3,9 @@
 
 概要:
   UserエンティティのMongoDB永続化を担当する。
-  ユーザーの保存・ユーザー名による検索・重複チェックを提供する。
+  ユーザー名による検索と、サマリー送信先メールアドレスの参照・更新を提供する。
+  資格情報は環境変数を出所とするためこのリポジトリでは扱わない(admin_credentialsを参照)。
 """
-
-import logging
 
 from flask import current_app
 
@@ -18,22 +17,8 @@ class UserRepository:
     def __init__(self):
         self.collection = current_app.mongo.users
 
-    def already_register_user(self, user):
-        existing_user = self.collection.find_one({"username": user.username})
-        return existing_user
-
-    def save(self, user):
-        user_data = {
-            "username": user.username,
-            "password": user.password,
-            "avatar": user.avatar,
-            "email": user.email,
-        }
-        self.collection.insert_one(user_data)
-
     def find_by_username(self, username):
         user_data = self.collection.find_one({"username": username})
-        logging.info(user_data)
         if user_data:
             user = User(
                 id=user_data["_id"],

@@ -170,9 +170,16 @@ a:hover {
 }
 
 .sidebar-user-label {
+  display: block;
   font-size: 0.7rem;
   color: var(--text-muted);
   margin-top: 0.15rem;
+  text-decoration: none;
+}
+
+.sidebar-user-label:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
 }
 
 /* ===== Main Content ===== */

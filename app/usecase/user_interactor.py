@@ -2,34 +2,22 @@
 [usecase] ユーザーユースケース
 
 概要:
-  ユーザーの登録と認証に関するアプリケーションロジックを制御する。
-  重複ユーザー名チェック付きの登録処理と、パスワード照合による認証処理を提供する。
+  利用者の認証に関するアプリケーションロジックを制御する。
+  本アプリの利用者は管理ユーザー1人だけのため登録処理は持たず、
+  環境変数に設定された資格情報との照合と、セッションからの利用者復元のみを提供する。
 """
-import logging
 
-from flask_bcrypt import check_password_hash
-
-from app.infrastructure.user_repository import UserRepository
-
-
-# インタラクタ内での例外クラスの定義
-class UserAlreadyExistsError(Exception):
-    pass
+from app.infrastructure.admin_credentials import load_admin_user, verify_password
 
 
 class UserInteractor:
-    def register_user(self, user):
-        user_repository = UserRepository()
-        existing_user = user_repository.already_register_user(user)
-        if existing_user:
-            raise UserAlreadyExistsError("アカウント名は既に使用されています")
-        user_repository.save(user)
-
     def authenticate(self, username, password):
-        user_repository = UserRepository()
-        user = user_repository.find_by_username(username)
-        logging.info("user: {}".format(user))
-        if user and check_password_hash(user.password, password):
-            logging.info('認証成功')
-            return user
+        """資格情報を照合し、一致すればUserを、一致しなければNoneを返す"""
+        return verify_password(username, password)
+
+    def find_login_user(self, user_id):
+        """セッションに保存された利用者IDから、ログイン中のUserを復元する"""
+        admin = load_admin_user()
+        if admin and admin.get_id() == user_id:
+            return admin
         return None
