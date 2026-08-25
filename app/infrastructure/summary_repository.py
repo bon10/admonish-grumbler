@@ -92,11 +92,19 @@ class SummaryRepository:
             {"$set": {"feedback": feedback, "feedback_at": datetime.now()}},
         )
 
-    def exists_for_period(self, summary_type, period_start, period_end):
-        count = self.collection.count_documents({
-            "type": summary_type,
-            "period_start": period_start,
-            "period_end": period_end,
-            "status": "completed",
-        })
+    def exists_created_since(self, summary_type, since):
+        """
+        指定時刻以降に作成された同じ種別のサマリーがあるかを返す。
+
+        定期実行が同じ回を重複起動したときに二重生成しないための判定に使う。
+        生成に失敗した回も「作成済み」として数える。投稿が無い期間は
+        再実行しても同じ結果になり、やり直す意味がないため。
+        """
+        count = self.collection.count_documents(
+            {
+                "type": summary_type,
+                "created_at": {"$gte": since},
+            },
+            limit=1,
+        )
         return count > 0

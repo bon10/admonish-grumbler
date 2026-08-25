@@ -5,8 +5,9 @@
   AI要約(Summary)に関するHTTPエンドポイントを定義するFlask Blueprint。
   GET /summaries(一覧)、GET /summary/<id>(詳細)、POST /summary/<id>/feedback(フィードバック)、
   POST /summary/generate(非同期生成開始)、GET /summary/<id>/status(生成状況確認)を提供する。
-  サマリー生成はバックグラウンドスレッドで実行し、クライアントはポーリングで完了を確認する。
-  フィードバックの指示への正規化もAI呼び出しを伴うため、バックグラウンドスレッドで実行する。
+  サマリー生成はAI呼び出しの完了を待って結果を返す。
+  フィードバックの指示への正規化もAI呼び出しを伴うため、投稿者を待たせないよう
+  バックグラウンドスレッドで実行する。
 """
 import threading
 
@@ -40,7 +41,10 @@ def feedback(summary_id):
         needs_consolidation = summary_interactor.save_feedback(summary_id, feedback_text)
         flash("フィードバックを保存しました")
         if needs_consolidation:
-            # 正規化はAI呼び出しを伴うため、ユーザーを待たせないようバックグラウンドで実行する
+            # 正規化はAI呼び出しを伴うため、ユーザーを待たせないようバックグラウンドで実行する。
+            # デプロイ先(Vercel)ではレスポンス送信後にこのスレッドが打ち切られることがあるが、
+            # 未正規化のフィードバックは次回のサマリー生成時にまとめて正規化されるため、
+            # 打ち切られても取りこぼしにはならない。
             app = current_app._get_current_object()
 
             def consolidate_in_background():
@@ -53,24 +57,20 @@ def feedback(summary_id):
 
 @bp.route("/summary/generate", methods=["POST"])
 def generate():
+    """
+    サマリーを生成し、完了してからレスポンスを返す。
+
+    デプロイ先(Vercel)はレスポンス送信後に関数の実行を止めるため、
+    生成をバックグラウンドスレッドに逃がすと処理が完了せず
+    サマリーがgeneratingのまま取り残される。そのため同期的に実行する。
+    クライアントは戻り値のsummary_idでステータスを確認するので、
+    完了後に返しても画面側の流れは変わらない。
+    """
     summary_type = request.form.get("type", "weekly")
-    if summary_type == "monthly":
-        result = summary_interactor.start_monthly_summary()
-    else:
-        result = summary_interactor.start_weekly_summary()
+    summary_id, s_type, period_start, period_end, period_label = summary_interactor.start_summary(summary_type)
+    summary_interactor.run_generation(summary_id, s_type, period_start, period_end, period_label)
 
-    summary_id, s_type, period_start, period_end, period_label = result
-
-    app = current_app._get_current_object()
-
-    def run_in_background():
-        with app.app_context():
-            summary_interactor.run_generation(summary_id, s_type, period_start, period_end, period_label)
-
-    thread = threading.Thread(target=run_in_background)
-    thread.start()
-
-    return jsonify({"summary_id": summary_id, "status": "generating"})
+    return jsonify({"summary_id": summary_id, "status": summary_interactor.get_summary_status(summary_id)})
 
 
 @bp.route("/summary/<summary_id>/status")

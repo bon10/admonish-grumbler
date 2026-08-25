@@ -3,8 +3,12 @@
 
 概要:
   create_app()でFlaskアプリの初期化を行う。
-  DB接続(MongoDB)、Blueprint登録、スケジューラ起動、ログインセッションの初期化を担当する。
+  DB接続(MongoDB)、Blueprint登録、ログインセッションの初期化を担当する。
   アプリケーション全体のエントリーポイント。
+
+  定期サマリー生成の起動経路は環境で異なる。
+  本番(Vercel)は常駐プロセスを持てないためVercel Cronがcron_controllerを叩き、
+  ローカルはアプリ内スケジューラ(scheduler.py)が同じ処理を呼ぶ。
 """
 
 import os
@@ -38,6 +42,7 @@ def create_app():
 
     with app.app_context():
         from .interface.http import (
+            cron_controller,
             dashboard_controller,
             index_controller,
             post_controller,
@@ -52,13 +57,14 @@ def create_app():
     app.register_blueprint(summary_controller.bp)
     app.register_blueprint(dashboard_controller.bp)
     app.register_blueprint(search_controller.bp)
+    app.register_blueprint(cron_controller.bp)
 
-    # Initialize APScheduler for periodic summary generation
-    # Flaskのreloaderは親プロセス+子プロセスの2重起動になるため、
-    # 子プロセス(実際にリクエストを処理する側)でのみスケジューラを起動する
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
-        from .scheduler import init_scheduler
+    # ローカルではアプリ内スケジューラで定期実行を再現する。
+    # 本番(Vercel)は常駐プロセスを持てないため起動せず、Vercel Cronがcron_controllerを叩く。
+    # Flaskのreloaderは親子2プロセスで起動するため、実際にリクエストを処理する子でのみ動かす。
+    from .scheduler import init_scheduler, is_enabled
 
+    if is_enabled() and (os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug):
         init_scheduler(app)
 
     @app.before_request
@@ -69,8 +75,10 @@ def create_app():
         本アプリは管理ユーザー1人しか使わず全画面が非公開のため、
         画面ごとにデコレータを付けて回るより、既定を非公開にして
         例外だけを列挙するほうが付け忘れによる情報露出を防げる。
+        定期実行エンドポイントは人間のセッションを持たず
+        CRON_SECRETで別途認証するため、この判定の対象外とする。
         """
-        if request.endpoint in PUBLIC_ENDPOINTS:
+        if request.endpoint in PUBLIC_ENDPOINTS or request.blueprint == "cron":
             return None
         if not current_user.is_authenticated:
             return redirect(url_for("user.login"))
