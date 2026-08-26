@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GRUMBLER">
+  <defs>
+    <linearGradient id="grumbler-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#grumbler-tile)"/>
+  <g fill="#0e0e11">
+    <rect x="88" y="112" width="336" height="240" rx="56"/>
+    <path d="M152 316 L152 432 L268 330 Z"/>
+  </g>
+  <g fill="#fb923c">
+    <circle cx="180" cy="232" r="26"/>
+    <circle cx="256" cy="232" r="26"/>
+    <circle cx="332" cy="232" r="26"/>
+  </g>
+</svg>
