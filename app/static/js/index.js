@@ -1,33 +1,60 @@
 const messageInput = document.getElementById("messageInput");
 const messageList = document.getElementById("messageList");
 
-document
-  .getElementById("postForm")
-  .addEventListener("submit", function (event) {
-    event.preventDefault();
-    var content = document.querySelector('textarea[name="content"]').value;
-    fetch("/post", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ content: content }),
+const postForm = document.getElementById("postForm");
+const postButton = postForm.querySelector(".btn-post");
+const postTextarea = postForm.querySelector('textarea[name="content"]');
+const POST_BUTTON_LABEL = postButton.textContent;
+
+// 本アプリは投稿時にリンク先のOGP取得を挟むため、/post の応答に数秒かかることがある。
+// その間に利用者が「投稿」を連打すると同じ愚痴が複数件登録されてしまうため、
+// 応答が返るまで送信処理自体を受け付けないようにする。
+let isPosting = false;
+
+function setPostingState(posting) {
+  isPosting = posting;
+  postButton.disabled = posting;
+  postButton.textContent = posting ? "投稿中…" : POST_BUTTON_LABEL;
+}
+
+postForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+  // Enterキー送信など、ボタンのdisabledを経由しない送信経路もここで止める
+  if (isPosting) return;
+
+  var content = postTextarea.value;
+  setPostingState(true);
+
+  fetch("/post", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ content: content }),
+  })
+    .then(function (response) {
+      if (response.ok) {
+        console.log("愚痴の投稿に成功しました🤓");
+        postTextarea.value = ""; // テキストエリアをクリア
+        // 成功時はリロードで画面が作り直されるため、ボタンは無効のままにしておく
+        location.reload();
+      } else {
+        alert("愚痴の投稿に失敗しました😭");
+        console.log("愚痴の投稿に失敗しました😭");
+        setPostingState(false);
+      }
     })
-      .then(function (response) {
-        if (response.ok) {
-          console.log("愚痴の投稿に成功しました🤓");
-          document.querySelector('textarea[name="content"]').value = ""; // テキストエリアをクリア
-          location.reload();
-          // ここで投稿データを追加表示するなどの処理を行う
-        } else {
-          alert("愚痴の投稿に失敗しました😭");
-          console.log("愚痴の投稿に失敗しました😭");
-        }
-      })
-      .catch(function (error) {
-        console.log("通信エラー:", error);
-      });
-  });
+    .catch(function (error) {
+      console.log("通信エラー:", error);
+      setPostingState(false);
+    });
+});
+
+// ブラウザバックでキャッシュから復帰したときに、ボタンが「投稿中…」のまま
+// 押せなくなるのを防ぐ
+window.addEventListener("pageshow", function (event) {
+  if (event.persisted) setPostingState(false);
+});
 
 document.addEventListener("DOMContentLoaded", (event) => {
   // 削除ボタン

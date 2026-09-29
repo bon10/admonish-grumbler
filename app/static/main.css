@@ -315,6 +315,15 @@ a:hover {
   transform: translateY(0);
 }
 
+/* 投稿処理中は押せないことが見た目で分かるようにする（二重投稿防止） */
+.btn-post:disabled {
+  background: var(--accent) !important;
+  opacity: 0.55;
+  cursor: not-allowed !important;
+  transform: none;
+  box-shadow: none !important;
+}
+
 /* ===== Post Feed ===== */
 .post-feed {
   display: flex;
