@@ -21,13 +21,27 @@ from app.domain.services.feedback_prompt_builder import FEEDBACK_MERGE_SCHEMA, b
 
 logger = logging.getLogger(__name__)
 
+# Gemini API側の一時的な過負荷(503 UNAVAILABLE)でサマリー生成を落とさないため、
+# 指数バックオフでの再送をSDKに任せる。SDKは再送を設定しないと1回で諦めるため明示する。
+# 再送対象のステータス(408/429/5xx)はSDKの既定に従う。
+# 生成はVercelの関数内で同期実行するので、待ち時間の合計(約1+2+4+8=15秒)が
+# 関数の実行時間上限を食い潰さない範囲に収める。
+_RETRY_OPTIONS = types.HttpRetryOptions(
+    attempts=5,  # 初回の呼び出しを含む回数
+    initial_delay=1.0,
+    max_delay=8.0,
+)
+
 
 class AIClient:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set")
-        self.client = genai.Client(api_key=api_key)
+        self.client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(retry_options=_RETRY_OPTIONS),
+        )
         # 挙動を固定したいので安定版を明示する。
         # 旧モデル(gemini-2.5-flash)は新規利用が打ち切られ、APIから移行先として案内された版。
         self.model = "gemini-3.6-flash"
